@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
+import { useAuth } from '@/components/auth/AuthContext';
 import { WalletCard } from '@/components/wallet/WalletCard';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
 import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
@@ -13,13 +14,14 @@ import { cn } from '@/lib/utils';
 
 export default function Index() {
   const { wallets, transactions, getTotalBalance, getMonthlyExpenses, getMonthlyIncome } = useStore();
+  const { user } = useAuth();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
 
   const totalBalance = getTotalBalance();
   const monthlyExpenses = getMonthlyExpenses();
   const monthlyIncome = getMonthlyIncome();
-  
+
   const recentTransactions = [...transactions]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
@@ -37,9 +39,27 @@ export default function Index() {
     <AppLayout>
       <div className="py-6 space-y-6">
         {/* Header */}
-        <div className="space-y-1 animate-fade-in">
-          <p className="text-muted-foreground text-sm">Welcome back 👋</p>
-          <h1 className="text-2xl font-bold text-foreground">SpendWise</h1>
+        <div className="flex items-center justify-between animate-fade-in">
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-sm">
+              {user ? 'Welcome back 👋' : 'Welcome Guest 👋'}
+            </p>
+            <h1 className="text-2xl font-bold text-foreground">SpendWise</h1>
+          </div>
+          {!user && (
+            <div className="flex gap-2">
+              <Link to="/login">
+                <Button variant="secondary" size="sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button size="sm">
+                  Sign up
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Total Balance Card */}
@@ -75,16 +95,16 @@ export default function Index() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover:bg-success/10 hover:border-success hover:text-success transition-all"
             onClick={() => setShowAddTransaction(true)}
           >
             <TrendingUp className="w-5 h-5" />
             <span className="text-sm font-medium">Add Income</span>
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-all"
             onClick={() => setShowAddTransaction(true)}
           >
@@ -97,16 +117,16 @@ export default function Index() {
         <section className="space-y-3 animate-fade-in" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">My Wallets</h2>
-            <Link 
-              to="/wallets" 
+            <Link
+              to="/wallets"
               className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
             >
               See all <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          
+
           {wallets.length === 0 ? (
-            <Card 
+            <Card
               className="p-6 border-dashed cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
               onClick={() => setShowAddWallet(true)}
             >
@@ -128,14 +148,14 @@ export default function Index() {
         <section className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">Recent Transactions</h2>
-            <Link 
-              to="/analytics" 
+            <Link
+              to="/analytics"
               className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
             >
               See all <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          
+
           {recentTransactions.length === 0 ? (
             <Card className="p-6 border-dashed">
               <div className="flex flex-col items-center gap-2 text-muted-foreground">

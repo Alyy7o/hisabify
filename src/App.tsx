@@ -19,17 +19,16 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 const queryClient = new QueryClient();
 
 // Protected Route Component
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, loading } = useAuth();
+// Auth Wrapper Component - handles data sync but doesn't force login
+const AuthWrapper = ({ children }: { children: ReactNode }) => {
+  const { loading } = useAuth();
+  // We can add logic here later to try syncing if a token exists in storage
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>; // Or a nice spinner
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
+  // No redirect - just render children even if !user
   return <>{children}</>;
 };
 
@@ -47,12 +46,12 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
 
-              {/* Protected Routes */}
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/wallets" element={<ProtectedRoute><Wallets /></ProtectedRoute>} />
-              <Route path="/add" element={<ProtectedRoute><AddTransaction /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              {/* Main Routes - Accessible to all */}
+              <Route path="/" element={<AuthWrapper><Index /></AuthWrapper>} />
+              <Route path="/wallets" element={<AuthWrapper><Wallets /></AuthWrapper>} />
+              <Route path="/add" element={<AuthWrapper><AddTransaction /></AuthWrapper>} />
+              <Route path="/analytics" element={<AuthWrapper><Analytics /></AuthWrapper>} />
+              <Route path="/settings" element={<AuthWrapper><Settings /></AuthWrapper>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

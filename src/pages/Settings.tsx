@@ -2,25 +2,31 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { 
-  User, 
-  Palette, 
-  Download, 
-  Shield, 
-  HelpCircle, 
+import {
+  User,
+  Palette,
+  Download,
+  Shield,
+  HelpCircle,
   ChevronRight,
   Trash2,
   Smartphone,
   Moon,
-  Sun
+  Sun,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { useAuth } from '@/components/auth/AuthContext';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const { wallets, transactions } = useStore();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -41,7 +47,7 @@ export default function Settings() {
       e.preventDefault();
       setDeferredPrompt(e);
     };
-    
+
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
@@ -51,10 +57,10 @@ export default function Settings() {
       toast.info('App is already installed or installation is not available');
       return;
     }
-    
+
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     if (outcome === 'accepted') {
       toast.success('App installed successfully!');
       setIsInstalled(true);
@@ -68,7 +74,7 @@ export default function Settings() {
       transactions,
       exportedAt: new Date().toISOString(),
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -78,7 +84,7 @@ export default function Settings() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     toast.success('Data exported successfully');
   };
 
@@ -86,6 +92,16 @@ export default function Settings() {
     if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
       localStorage.removeItem('spendwise-storage');
       window.location.reload();
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Signed out successfully');
+      navigate('/login');
+    } catch (error) {
+      toast.error('Error signing out');
     }
   };
 
@@ -108,10 +124,22 @@ export default function Settings() {
         {
           icon: User,
           label: 'Profile',
-          description: 'Guest mode (local storage)',
-          action: () => toast.info('Cloud sync coming soon!'),
+          description: user ? user.email : 'Guest mode (local storage)',
+          action: () => user ? null : navigate('/login'),
         },
-      ],
+        user ? {
+          icon: LogOut,
+          label: 'Sign Out',
+          description: 'Log out of your account',
+          action: handleSignOut,
+          destructive: true,
+        } : {
+          icon: LogIn,
+          label: 'Sign In',
+          description: 'Sync your data to the cloud',
+          action: () => navigate('/login'),
+        },
+      ].filter(Boolean),
     },
     {
       title: 'Preferences',
@@ -174,7 +202,7 @@ export default function Settings() {
             </div>
             <div>
               <h2 className="font-bold text-foreground text-lg">SpendWise</h2>
-              <p className="text-sm text-muted-foreground">Version 1.0.0 • Guest Mode</p>
+              <p className="text-sm text-muted-foreground">Version 1.0.0 • {user ? 'Pro Plan' : 'Guest Mode'}</p>
             </div>
           </div>
         </Card>
@@ -195,8 +223,8 @@ export default function Settings() {
 
         {/* Settings Groups */}
         {settingsGroups.map((group, groupIndex) => (
-          <section 
-            key={group.title} 
+          <section
+            key={group.title}
             className="space-y-2 animate-fade-in"
             style={{ animationDelay: `${100 + groupIndex * 50}ms` }}
           >
@@ -207,9 +235,8 @@ export default function Settings() {
                   key={item.label}
                   onClick={item.action}
                   disabled={item.disabled}
-                  className={`w-full p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${
-                    item.destructive ? 'text-destructive' : ''
-                  }`}
+                  className={`w-full p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${item.destructive ? 'text-destructive' : ''
+                    }`}
                 >
                   <item.icon className={`w-5 h-5 ${item.destructive ? 'text-destructive' : 'text-muted-foreground'}`} />
                   <div className="flex-1 min-w-0">
