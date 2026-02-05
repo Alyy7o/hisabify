@@ -22,13 +22,13 @@ import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
+import { usePWA } from '@/components/pwa/PWAContext';
 
 export default function Settings() {
   const { wallets, transactions } = useStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const { isInstallable, isInstalled, installApp } = usePWA();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -36,36 +36,13 @@ export default function Settings() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-    }
-
-    // Listen for install prompt
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
   const handleInstall = async () => {
-    if (!deferredPrompt) {
-      toast.info('App is already installed or installation is not available');
-      return;
-    }
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === 'accepted') {
+    const installed = await installApp();
+    if (installed) {
       toast.success('App installed successfully!');
-      setIsInstalled(true);
+    } else {
+      toast.info('App is already installed or installation is not available');
     }
-    setDeferredPrompt(null);
   };
 
   const handleExport = () => {
@@ -114,7 +91,7 @@ export default function Settings() {
           label: 'Install App',
           description: isInstalled ? 'App is installed' : 'Add to home screen',
           action: handleInstall,
-          disabled: isInstalled,
+          disabled: !isInstallable,
         },
       ],
     },

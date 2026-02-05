@@ -6,6 +6,7 @@ import { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider, useAuth } from "@/components/auth/AuthContext";
+import { PWAProvider } from "@/components/pwa/PWAContext";
 import Index from "./pages/Index";
 import Wallets from "./pages/Wallets";
 import AddTransaction from "./pages/AddTransaction";
@@ -39,22 +40,24 @@ const App = () => (
         <Toaster />
         <Sonner position="top-center" />
         <AuthProvider>
-          <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
+          <PWAProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
-              {/* Main Routes - Accessible to all */}
-              <Route path="/" element={<AuthWrapper><Index /></AuthWrapper>} />
-              <Route path="/wallets" element={<AuthWrapper><Wallets /></AuthWrapper>} />
-              <Route path="/add" element={<AuthWrapper><AddTransaction /></AuthWrapper>} />
-              <Route path="/analytics" element={<AuthWrapper><Analytics /></AuthWrapper>} />
-              <Route path="/settings" element={<AuthWrapper><Settings /></AuthWrapper>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+                {/* Main Routes - Accessible to all */}
+                <Route path="/" element={<AuthWrapper><Index /></AuthWrapper>} />
+                <Route path="/wallets" element={<AuthWrapper><Wallets /></AuthWrapper>} />
+                <Route path="/add" element={<AuthWrapper><AddTransaction /></AuthWrapper>} />
+                <Route path="/analytics" element={<AuthWrapper><Analytics /></AuthWrapper>} />
+                <Route path="/settings" element={<AuthWrapper><Settings /></AuthWrapper>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </PWAProvider>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>

@@ -73,6 +73,7 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="bank">Bank Account</SelectItem>
+                <SelectItem value="digital_wallet">Digital Wallet</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="card">Credit Card</SelectItem>
                 <SelectItem value="savings">Savings</SelectItem>

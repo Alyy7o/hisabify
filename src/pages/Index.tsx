@@ -46,20 +46,22 @@ export default function Index() {
             </p>
             <h1 className="text-2xl font-bold text-foreground">SpendWise</h1>
           </div>
-          {!user && (
-            <div className="flex gap-2">
-              <Link to="/login">
-                <Button variant="secondary" size="sm">
-                  Log in
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button size="sm">
-                  Sign up
-                </Button>
-              </Link>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {!user && (
+              <>
+                <Link to="/login">
+                  <Button variant="secondary" size="sm">
+                    Log in
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button size="sm">
+                    Sign up
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Total Balance Card */}

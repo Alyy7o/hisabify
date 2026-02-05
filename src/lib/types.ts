@@ -1,7 +1,7 @@
 export interface Wallet {
   id: string;
   name: string;
-  type: 'bank' | 'cash' | 'card' | 'savings';
+  type: 'bank' | 'cash' | 'card' | 'savings' | 'digital_wallet';
   balance: number;
   currency: 'PKR' | 'USD';
   icon: string;
