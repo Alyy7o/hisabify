@@ -201,7 +201,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'spendwise-storage',
+      name: 'hisab-storage',
       // skipHydration REMOVED to fix local persistence
     }
   )
@@ -214,9 +214,12 @@ async function pushWalletToSupabase(wallet: Wallet) {
     if (session.data.session?.user) {
       console.log('Pushing wallet to Supabase:', wallet.name);
       const { id, name, type, balance, currency, icon, color } = wallet;
-      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('wallets').upsert({
-        id, user_id: session.data.session!.user.id, name, type, balance, currency, icon, color
-      }));
+      const payload = { id, user_id: session.data.session!.user.id, name, type, balance, currency, icon, color };
+
+      console.log('Wallet Payload:', JSON.stringify(payload, null, 2));
+
+      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('wallets').upsert(payload));
+
       if (error) {
         console.error('Error syncing wallet:', error);
       } else {
@@ -236,7 +239,7 @@ async function pushTransactionToSupabase(transaction: Transaction) {
     if (session.data.session?.user) {
       console.log('Pushing transaction to Supabase');
       const { id, walletId, amount, type, categoryId, reason, date, notes } = transaction;
-      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('transactions').upsert({
+      const payload = {
         id,
         user_id: session.data.session!.user.id,
         wallet_id: walletId,
@@ -246,9 +249,37 @@ async function pushTransactionToSupabase(transaction: Transaction) {
         reason,
         date: new Date(date).toISOString(),
         notes
-      }));
+      };
+
+      console.log('Transaction Payload:', JSON.stringify(payload, null, 2));
+
+      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('transactions').upsert(payload));
+
       if (error) {
-        console.error('Error syncing transaction:', error);
+        console.error('Initial Transaction Sync Error:', error);
+        if (error.code === '23503') { // Foreign key violation (wallet_id not found)
+          console.warn('Transaction sync failed: Wallet not found in DB. Attempting to sync wallet first...');
+          const wallet = useStore.getState().wallets.find(w => w.id === walletId);
+
+          if (wallet) {
+            console.log('Found local wallet, syncing now:', wallet.name);
+            await pushWalletToSupabase(wallet);
+            // Retry transaction sync
+            console.log('Retrying transaction sync...');
+            const { error: retryError } = await import('@/lib/supabase').then(m => m.supabase.from('transactions').upsert(payload));
+
+            if (retryError) {
+              console.error('Error syncing transaction after wallet retry:', retryError);
+            } else {
+              console.log('Transaction synced successfully after wallet retry');
+            }
+          } else {
+            console.error('Local wallet not found for transaction:', walletId);
+            console.log('Available wallets:', useStore.getState().wallets.map(w => w.id));
+          }
+        } else {
+          console.error('Error syncing transaction:', error);
+        }
       } else {
         console.log('Transaction synced successfully');
       }

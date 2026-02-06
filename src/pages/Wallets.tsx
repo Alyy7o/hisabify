@@ -10,13 +10,14 @@ import { Card } from '@/components/ui/card';
 export default function Wallets() {
   const { wallets, getTotalBalance } = useStore();
   const [showAddWallet, setShowAddWallet] = useState(false);
+  const [editingWallet, setEditingWallet] = useState<any>(null); // Use proper type if available
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-PK', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PKR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -37,7 +38,7 @@ export default function Wallets() {
         </Card>
 
         {/* Add Wallet Button */}
-        <Button 
+        <Button
           onClick={() => setShowAddWallet(true)}
           className="w-full gap-2"
         >
@@ -63,8 +64,8 @@ export default function Wallets() {
         ) : (
           <div className="grid gap-3">
             {wallets.map((wallet, index) => (
-              <div 
-                key={wallet.id} 
+              <div
+                key={wallet.id}
                 className="animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >

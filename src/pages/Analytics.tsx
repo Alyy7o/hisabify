@@ -19,7 +19,7 @@ export default function Analytics() {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
-    
+
     const monthlyTransactions = transactions.filter(t => {
       const date = new Date(t.date);
       return t.type === 'expense' && date >= monthStart && date <= monthEnd;
@@ -53,7 +53,7 @@ export default function Analytics() {
         const date = new Date(t.date);
         return isSameDay(date, day);
       });
-      
+
       const income = dayTransactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
@@ -75,9 +75,9 @@ export default function Analytics() {
     .slice(0, 10);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-PK', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PKR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -114,15 +114,15 @@ export default function Analytics() {
             <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dailyData}>
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   />
                   <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ 
+                  <Tooltip
+                    contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
@@ -168,8 +168,8 @@ export default function Analytics() {
                 {categoryData.slice(0, 4).map((category) => (
                   <div key={category.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
+                      <div
+                        className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: category.color }}
                       />
                       <span className="text-sm text-foreground">{category.icon} {category.name}</span>

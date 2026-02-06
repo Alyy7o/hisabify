@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "SpendWise - Personal Finance Tracker",
-        short_name: "SpendWise",
+        name: "Hisab - Personal Finance Tracker",
+        short_name: "Hisab",
         description: "Track your expenses, manage wallets, and gain financial insights",
         theme_color: "#10b981",
         background_color: "#f7faf8",

@@ -28,17 +28,17 @@ export default function AddTransaction() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (wallets.length === 0) {
       toast.error('Please add a wallet first');
       return;
     }
-    
+
     if (!walletId || !categoryId || !amount || !reason.trim()) {
       toast.error('Please fill in all required fields');
       return;
     }
-    
+
     addTransaction({
       id: crypto.randomUUID(),
       walletId,
@@ -49,7 +49,7 @@ export default function AddTransaction() {
       notes: notes.trim() || undefined,
       date: new Date(date),
     });
-    
+
     toast.success(`${type === 'income' ? 'Income' : 'Expense'} added successfully`);
     navigate('/');
   };
@@ -66,8 +66,8 @@ export default function AddTransaction() {
                 onClick={() => setType('expense')}
                 className={cn(
                   "flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all",
-                  type === 'expense' 
-                    ? "bg-destructive text-destructive-foreground shadow-md" 
+                  type === 'expense'
+                    ? "bg-destructive text-destructive-foreground shadow-md"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -78,8 +78,8 @@ export default function AddTransaction() {
                 onClick={() => setType('income')}
                 className={cn(
                   "flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all",
-                  type === 'income' 
-                    ? "bg-success text-success-foreground shadow-md" 
+                  type === 'income'
+                    ? "bg-success text-success-foreground shadow-md"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -92,7 +92,7 @@ export default function AddTransaction() {
           <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
             <Label htmlFor="amount" className="text-foreground">Amount</Label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-muted-foreground">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-muted-foreground">Rs</span>
               <Input
                 id="amount"
                 type="number"
@@ -113,9 +113,9 @@ export default function AddTransaction() {
             {wallets.length === 0 ? (
               <Card className="p-4 border-dashed text-center">
                 <p className="text-sm text-muted-foreground mb-2">No wallets available</p>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   size="sm"
                   onClick={() => navigate('/wallets')}
                 >
@@ -200,8 +200,8 @@ export default function AddTransaction() {
           </div>
 
           {/* Submit Button */}
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className={cn(
               "w-full h-12 text-base font-semibold animate-fade-in",
               type === 'income' && "bg-success hover:bg-success/90"

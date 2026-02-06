@@ -27,11 +27,11 @@ export default function Index() {
     .slice(0, 5);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-PK', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PKR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -44,7 +44,7 @@ export default function Index() {
             <p className="text-muted-foreground text-sm">
               {user ? 'Welcome back 👋' : 'Welcome Guest 👋'}
             </p>
-            <h1 className="text-2xl font-bold text-foreground">SpendWise</h1>
+            <h1 className="text-2xl font-bold text-foreground">Hisab</h1>
           </div>
           <div className="flex gap-2">
             {!user && (

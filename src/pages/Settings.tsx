@@ -155,7 +155,7 @@ export default function Settings() {
         {
           icon: HelpCircle,
           label: 'Help & FAQ',
-          description: 'Get help with SpendWise',
+          description: 'Get help with Hisab',
           action: () => toast.info('Help section coming soon!'),
         },
         {
@@ -178,7 +178,7 @@ export default function Settings() {
               💰
             </div>
             <div>
-              <h2 className="font-bold text-foreground text-lg">SpendWise</h2>
+              <h2 className="font-bold text-foreground text-lg">Hisab</h2>
               <p className="text-sm text-muted-foreground">Version 1.0.0 • {user ? 'Pro Plan' : 'Guest Mode'}</p>
             </div>
           </div>

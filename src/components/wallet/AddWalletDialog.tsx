@@ -1,49 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStore } from '@/store/useStore';
-import { WALLET_ICONS, WALLET_COLORS } from '@/lib/types';
+import { WALLET_ICONS, WALLET_COLORS, Wallet } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface AddWalletDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: Wallet;
 }
 
-export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
-  const { addWallet } = useStore();
+export function AddWalletDialog({ open, onOpenChange, initialData }: AddWalletDialogProps) {
+  const { addWallet, updateWallet } = useStore();
   const [name, setName] = useState('');
   const [type, setType] = useState<'bank' | 'cash' | 'card' | 'savings'>('bank');
   const [balance, setBalance] = useState('');
-  const [currency, setCurrency] = useState<'PKR' | 'USD'>('USD');
+  const [currency, setCurrency] = useState<'PKR' | 'USD'>('PKR');
   const [selectedIcon, setSelectedIcon] = useState(WALLET_ICONS[0]);
   const [selectedColor, setSelectedColor] = useState(WALLET_COLORS[0]);
+
+  useEffect(() => {
+    if (open) {
+      if (initialData) {
+        setName(initialData.name);
+        setType(initialData.type as any); // Cast purely for safety if types misalign slightly
+        setBalance(initialData.balance.toString());
+        setCurrency(initialData.currency);
+        setSelectedIcon(initialData.icon);
+        setSelectedColor(initialData.color);
+      } else {
+        setName('');
+        setType('bank');
+        setBalance('');
+        setCurrency('PKR');
+        setSelectedIcon(WALLET_ICONS[0]);
+        setSelectedColor(WALLET_COLORS[0]);
+      }
+    }
+  }, [open, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    
-    addWallet({
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      type,
-      balance: parseFloat(balance) || 0,
-      currency,
-      icon: selectedIcon,
-      color: selectedColor,
-      createdAt: new Date(),
-    });
-    
-    // Reset form
-    setName('');
-    setType('bank');
-    setBalance('');
-    setCurrency('USD');
-    setSelectedIcon(WALLET_ICONS[0]);
-    setSelectedColor(WALLET_COLORS[0]);
+
+    if (initialData) {
+      updateWallet(initialData.id, {
+        name: name.trim(),
+        type,
+        balance: parseFloat(balance) || 0,
+        currency,
+        icon: selectedIcon,
+        color: selectedColor,
+      });
+    } else {
+      addWallet({
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        type,
+        balance: parseFloat(balance) || 0,
+        currency,
+        icon: selectedIcon,
+        color: selectedColor,
+        createdAt: new Date(),
+      });
+    }
+
     onOpenChange(false);
   };
 
@@ -51,7 +76,7 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Wallet</DialogTitle>
+          <DialogTitle>{initialData ? 'Edit Wallet' : 'Add New Wallet'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -64,7 +89,7 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="type">Wallet Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
@@ -80,7 +105,7 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="balance">Initial Balance</Label>
@@ -100,13 +125,13 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="PKR">PKR (Rs)</SelectItem>
                   <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="PKR">PKR (₨)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label>Icon</Label>
             <div className="flex gap-2 flex-wrap">
@@ -117,8 +142,8 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
                   onClick={() => setSelectedIcon(icon)}
                   className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center text-lg border-2 transition-all",
-                    selectedIcon === icon 
-                      ? "border-primary bg-primary/10" 
+                    selectedIcon === icon
+                      ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50"
                   )}
                 >
@@ -127,7 +152,7 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
               ))}
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label>Color</Label>
             <div className="flex gap-2 flex-wrap">
@@ -138,8 +163,8 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
                   onClick={() => setSelectedColor(color)}
                   className={cn(
                     "w-8 h-8 rounded-full border-2 transition-all",
-                    selectedColor === color 
-                      ? "border-foreground scale-110" 
+                    selectedColor === color
+                      ? "border-foreground scale-110"
                       : "border-transparent hover:scale-105"
                   )}
                   style={{ backgroundColor: color }}
@@ -147,9 +172,9 @@ export function AddWalletDialog({ open, onOpenChange }: AddWalletDialogProps) {
               ))}
             </div>
           </div>
-          
+
           <Button type="submit" className="w-full">
-            Add Wallet
+            {initialData ? 'Update Wallet' : 'Add Wallet'}
           </Button>
         </form>
       </DialogContent>
