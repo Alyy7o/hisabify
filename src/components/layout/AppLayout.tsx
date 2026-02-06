@@ -56,8 +56,8 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex w-64 flex-col border-r bg-card/50 backdrop-blur-xl h-screen sticky top-0">
         <div className="p-6 border-b flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">H</span>
+          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
+            <img src="/logo.png" alt="Hisabify" className="w-full h-full object-cover" />
           </div>
           <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
             Hisabify

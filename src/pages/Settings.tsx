@@ -252,7 +252,7 @@ export default function Settings() {
         </Card>
 
         {/* Data Management */}
-        <section className="space-y-3 animate-fade-in">
+        {/* <section className="space-y-3 animate-fade-in">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             <Download className="w-4 h-4" />
             {t('settings.data_management')}
@@ -287,7 +287,7 @@ export default function Settings() {
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </Card>
-        </section>
+        </section> */}
 
         {/* Settings Groups */}
         {settingsGroups.map((group, groupIndex) => (
