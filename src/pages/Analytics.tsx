@@ -1,78 +1,243 @@
-import { useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { useStore } from '@/store/useStore';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  startOfDay,
+  endOfDay,
+  startOfYear,
+  endOfYear,
+  eachMonthOfInterval,
+  isSameMonth
+} from 'date-fns';
+import { cn } from '@/lib/utils';
+import { EditTransactionDialog } from '@/components/transaction/EditTransactionDialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+type FilterType = 'daily' | 'monthly' | 'yearly';
 
 export default function Analytics() {
-  const { transactions, categories, getMonthlyExpenses, getMonthlyIncome } = useStore();
+  const { transactions, categories } = useStore();
+  const [filter, setFilter] = useState<FilterType>('monthly');
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const { t } = useTranslation();
+  const ITEMS_PER_PAGE = 10;
 
-  const monthlyExpenses = getMonthlyExpenses();
-  const monthlyIncome = getMonthlyIncome();
-  const netFlow = monthlyIncome - monthlyExpenses;
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
-  // Category breakdown for expenses
-  const categoryData = useMemo(() => {
+  // Filter Transactions based on time range
+  const filteredData = useMemo(() => {
     const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
+    let start: Date, end: Date;
 
-    const monthlyTransactions = transactions.filter(t => {
+    switch (filter) {
+      case 'daily':
+        start = startOfDay(now);
+        end = endOfDay(now);
+        break;
+      case 'yearly':
+        start = startOfYear(now);
+        end = endOfYear(now);
+        break;
+      case 'monthly':
+      default:
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
+    }
+
+    const relevantTransactions = transactions.filter(t => {
       const date = new Date(t.date);
-      return t.type === 'expense' && date >= monthStart && date <= monthEnd;
+      return date >= start && date <= end;
     });
 
-    const categoryTotals = monthlyTransactions.reduce((acc, t) => {
+    const income = relevantTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const expense = relevantTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return {
+      transactions: relevantTransactions,
+      income,
+      expense,
+      net: income - expense
+    };
+  }, [transactions, filter]);
+
+  // Category breakdown
+  const categoryData = useMemo(() => {
+    const expenses = filteredData.transactions.filter(t => t.type === 'expense');
+    const categoryTotals = expenses.reduce((acc, t) => {
       acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(categoryTotals).map(([categoryId, amount]) => {
-      const category = categories.find(c => c.id === categoryId);
-      return {
-        name: category?.name || 'Other',
-        value: amount,
-        color: category?.color || '#888',
-        icon: category?.icon || '📦',
-      };
-    }).sort((a, b) => b.value - a.value);
-  }, [transactions, categories]);
+    return Object.entries(categoryTotals)
+      .map(([categoryId, amount]) => {
+        const category = categories.find(c => c.id === categoryId);
+        return {
+          name: category?.name || 'Other',
+          value: amount,
+          color: category?.color || '#888',
+          icon: category?.icon || '📦',
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [filteredData.transactions, categories]);
 
-  // Daily spending for the current month
-  const dailyData = useMemo(() => {
+  // Bar Chart Data
+  const chartData = useMemo(() => {
     const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
-    const days = eachDayOfInterval({ start: monthStart, end: now });
 
-    return days.map(day => {
-      const dayTransactions = transactions.filter(t => {
-        const date = new Date(t.date);
-        return isSameDay(date, day);
+    if (filter === 'yearly') {
+      const months = eachMonthOfInterval({
+        start: startOfYear(now),
+        end: endOfYear(now)
       });
 
-      const income = dayTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-      const expense = dayTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
+      return months.map(month => {
+        const monthTransactions = filteredData.transactions.filter(t =>
+          isSameMonth(new Date(t.date), month)
+        );
 
-      return {
-        date: format(day, 'd'),
-        income,
-        expense,
-      };
-    });
-  }, [transactions]);
+        const income = monthTransactions
+          .filter(t => t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const expense = monthTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
 
-  // Recent transactions
-  const recentTransactions = [...transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 10);
+        return {
+          name: format(month, 'MMM'),
+          income,
+          expense,
+        };
+      });
+    } else if (filter === 'monthly') {
+      const days = eachDayOfInterval({
+        start: startOfMonth(now),
+        end: now
+      });
+      // to keep it consistent with "monthly" view, we might want full month, but user context implies "latest".
+      // Let's use full month days for the chart x-axis if we want the scale to be consistent, but usually plotting up to 'now' is fine.
+      // However, previous code used full month logic in one branch. I will replicate the "show up to today" logic for simplicity or full month if desired.
+      // Reverting to full month for x-axis consistency as per earlier code snippet I wrote.
+      const fullMonthDays = eachDayOfInterval({
+        start: startOfMonth(now),
+        end: endOfMonth(now)
+      });
+
+      return fullMonthDays.map(day => {
+        const dayTransactions = filteredData.transactions.filter(t =>
+          isSameDay(new Date(t.date), day)
+        );
+
+        const income = dayTransactions
+          .filter(t => t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const expense = dayTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+
+        return {
+          name: format(day, 'd'),
+          income,
+          expense,
+        };
+      });
+    }
+
+    return []; // No chart for daily
+  }, [filteredData.transactions, filter]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredData.transactions.length / ITEMS_PER_PAGE);
+  const paginatedTransactions = useMemo(() => {
+    const sorted = [...filteredData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredData.transactions, currentPage]);
+
+  const handlePageChange = (page: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const renderPaginationItems = () => {
+    const items = [];
+    const maxVisiblePages = 5;
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    if (startPage > 1) {
+      items.push(
+        <PaginationItem key="1">
+          <PaginationLink href="#" onClick={(e) => handlePageChange(1, e)}>1</PaginationLink>
+        </PaginationItem>
+      );
+      if (startPage > 2) {
+        items.push(<PaginationItem key="ellipsis-start"><PaginationEllipsis /></PaginationItem>);
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink
+            href="#"
+            isActive={currentPage === i}
+            onClick={(e) => handlePageChange(i, e)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        items.push(<PaginationItem key="ellipsis-end"><PaginationEllipsis /></PaginationItem>);
+      }
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink href="#" onClick={(e) => handlePageChange(totalPages, e)}>{totalPages}</PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PK', {
@@ -84,41 +249,62 @@ export default function Analytics() {
   };
 
   return (
-    <AppLayout title="Analytics">
+    <AppLayout title={t('analytics.title')}>
       <div className="py-4 space-y-6">
+        {/* Filter Tabs */}
+        <div className="flex bg-secondary/50 p-1 rounded-lg animate-fade-in">
+          {(['daily', 'monthly', 'yearly'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                filter === f
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+              )}
+            >
+              {t(`analytics.${f}`)}
+            </button>
+          ))}
+        </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-3 animate-fade-in">
           <Card className="p-3 text-center">
             <TrendingUp className="w-5 h-5 mx-auto mb-1 text-success" />
-            <p className="text-xs text-muted-foreground">Income</p>
-            <p className="text-sm font-bold text-success">{formatCurrency(monthlyIncome)}</p>
+            <p className="text-xs text-muted-foreground">{t('common.income')}</p>
+            <p className="text-sm font-bold text-success">{formatCurrency(filteredData.income)}</p>
           </Card>
           <Card className="p-3 text-center">
             <TrendingDown className="w-5 h-5 mx-auto mb-1 text-destructive" />
-            <p className="text-xs text-muted-foreground">Expenses</p>
-            <p className="text-sm font-bold text-destructive">{formatCurrency(monthlyExpenses)}</p>
+            <p className="text-xs text-muted-foreground">{t('common.expense')}</p>
+            <p className="text-sm font-bold text-destructive">{formatCurrency(filteredData.expense)}</p>
           </Card>
           <Card className="p-3 text-center">
             <Activity className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-xs text-muted-foreground">Net</p>
-            <p className={`text-sm font-bold ${netFlow >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {formatCurrency(netFlow)}
+            <p className="text-xs text-muted-foreground">{t('analytics.net_flow')}</p>
+            <p className={`text-sm font-bold ${filteredData.net >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {formatCurrency(filteredData.net)}
             </p>
           </Card>
         </div>
 
-        {/* Daily Spending Chart */}
-        {dailyData.length > 0 && (
+        {/* Activity Chart */}
+        {filter !== 'daily' && (
           <Card className="p-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <h3 className="font-semibold text-foreground mb-4">Daily Activity</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              {filter === 'yearly' ? 'Monthly Activity' : 'Daily Activity'}
+            </h3>
             <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyData}>
+                <BarChart data={chartData}>
                   <XAxis
-                    dataKey="date"
+                    dataKey="name"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    interval={filter === 'yearly' ? 0 : 2}
                   />
                   <YAxis hide />
                   <Tooltip
@@ -184,22 +370,60 @@ export default function Analytics() {
           </Card>
         )}
 
-        {/* All Transactions */}
+        {/* Transaction List */}
         <section className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
-          <h3 className="font-semibold text-foreground">All Transactions</h3>
-          {recentTransactions.length === 0 ? (
+          <h3 className="font-semibold text-foreground">
+            {filter === 'daily' ? 'Today\'s Transactions' : 'Transactions'}
+          </h3>
+          {paginatedTransactions.length === 0 ? (
             <Card className="p-6 border-dashed text-center">
-              <p className="text-sm text-muted-foreground">No transactions yet</p>
+              <p className="text-sm text-muted-foreground">No transactions found</p>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {recentTransactions.map((transaction) => (
-                <TransactionItem key={transaction.id} transaction={transaction} />
-              ))}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                {paginatedTransactions.map((transaction) => (
+                  <TransactionItem
+                    key={transaction.id}
+                    transaction={transaction}
+                    onEdit={(t) => setEditingTransaction(t)}
+                  />
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => handlePageChange(currentPage - 1, e)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+
+                    {renderPaginationItems()}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => handlePageChange(currentPage + 1, e)}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
             </div>
           )}
         </section>
       </div>
+
+      <EditTransactionDialog
+        open={!!editingTransaction}
+        onOpenChange={(open) => !open && setEditingTransaction(null)}
+        transaction={editingTransaction}
+      />
     </AppLayout>
   );
 }

@@ -1,0 +1,70 @@
+{
+    "common": {
+        "add": "شامل کریں",
+        "save": "محفوظ کریں",
+        "cancel": "منسوخ کریں",
+        "delete": "ختم کریں",
+        "edit": "ترمیم کریں",
+        "income": "آمدنی",
+        "expense": "اخراجات",
+        "date": "تاریخ",
+        "amount": "رقم",
+        "reason": "وجہ",
+        "category": "زمرہ",
+        "wallet": "وائلٹ",
+        "quick_actions": "فوری اقدامات",
+        "add_transaction": "لین دین شامل کریں",
+        "add_wallet": "وائلٹ شامل کریں"
+    },
+    "sidebar": {
+        "dashboard": "ڈیش بورڈ",
+        "analytics": "تجزیہ",
+        "transactions": "لین دین",
+        "wallets": "وائلٹ",
+        "settings": "ترتیبات",
+        "signOut": "سائن آؤٹ"
+    },
+    "dashboard": {
+        "total_balance": "کل رقم",
+        "monthly_summary": "ماہانہ خلاصہ",
+        "quick_add": "فوری شامل کریں",
+        "recent_transactions": "حالیہ لین دین",
+        "no_transactions": "کوئی لین دین نہیں",
+        "view_all": "سب دیکھیں",
+        "welcome_back": "خوش آمدید، {{name}}",
+        "welcome_guest": "خوش آمدید مہمان",
+        "income": "آمدنی",
+        "expense": "اخراجات",
+        "my_wallets": "میرے بٹوے",
+        "see_all": "سب دیکھیں",
+        "add_first_wallet": "اپنا پہلا پرس شامل کریں",
+        "no_transactions_yet": "ابھی تک کوئی لین دین نہیں",
+        "start_tracking": "اپنے اخراجات کا سراغ لگانا شروع کریں!"
+    },
+    "auth": {
+        "login": "لاگ ان کریں",
+        "signup": "سائن اپ کریں"
+    },
+    "analytics": {
+        "title": "تجزیہ",
+        "daily": "روزانہ",
+        "monthly": "ماہانہ",
+        "yearly": "سالانہ",
+        "net_flow": "خالص بہاؤ",
+        "spending_by_category": "زمرہ جات کے اخراجات",
+        "daily_activity": "روزانہ کی سرگرمی",
+        "monthly_activity": "ماہانہ سرگرمی"
+    },
+    "settings": {
+        "title": "ترتیبات",
+        "language": "زبان",
+        "select_language": "زبان منتخب کریں",
+        "appearance": "ظاہری شکل",
+        "theme": "تھیم",
+        "data_management": "ڈیٹا مینجمنٹ",
+        "export_data": "ڈیٹا ایکسپورٹ کریں (PDF)",
+        "import_data": "ڈیٹا امپورٹ کریں (JSON)",
+        "danger_zone": "خطرناک زون",
+        "clear_data": "تمام ڈیٹا صاف کریں"
+    }
+}

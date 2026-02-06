@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Transaction } from '@/lib/types';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
@@ -11,6 +12,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -20,6 +31,7 @@ interface TransactionItemProps {
 
 export function TransactionItem({ transaction, onClick, onEdit }: TransactionItemProps) {
   const { categories, wallets, deleteTransaction } = useStore();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const category = categories.find(c => c.id === transaction.categoryId);
   const wallet = wallets.find(w => w.id === transaction.walletId);
@@ -34,11 +46,9 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
     }).format(amount);
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm('Are you sure you want to delete this transaction?')) {
-      deleteTransaction(transaction.id);
-    }
+  const handleDelete = () => {
+    deleteTransaction(transaction.id);
+    setShowDeleteDialog(false);
   };
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -47,54 +57,85 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
   };
 
   return (
-    <Card
-      className="p-3 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in border-border/50 group relative"
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-          style={{ backgroundColor: (category?.color || '#888') + '20' }}
-        >
-          {category?.icon || '📦'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{transaction.reason}</p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{category?.name || 'Other'}</span>
-            <span>•</span>
-            <span>{format(new Date(transaction.date), 'MMM d')}</span>
+    <>
+      <Card
+        className="p-3 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in border-border/50 group relative"
+        onClick={onClick}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+            style={{ backgroundColor: (category?.color || '#888') + '20' }}
+          >
+            {category?.icon || '📦'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{transaction.reason}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{category?.name || 'Other'}</span>
+              <span>•</span>
+              <span>{format(new Date(transaction.date), 'MMM d')}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <p className={cn(
+              "font-semibold text-sm shrink-0",
+              transaction.type === 'income' ? "text-success" : "text-destructive"
+            )}>
+              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+            </p>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                  <span className="sr-only">Open menu</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleEdit}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+      </Card>
 
-        <div className="flex items-center gap-3">
-          <p className={cn(
-            "font-semibold text-sm shrink-0",
-            transaction.type === 'income' ? "text-success" : "text-destructive"
-          )}>
-            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-          </p>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </Card>
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this transaction.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

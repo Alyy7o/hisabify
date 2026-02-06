@@ -14,22 +14,22 @@ export function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border pb-safe" dir="ltr">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const isAddButton = path === '/add';
-          
+
           return (
             <Link
               key={path}
               to={path}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 transition-all duration-200",
-                isAddButton 
-                  ? "relative -top-4" 
-                  : isActive 
-                    ? "text-primary" 
+                isAddButton
+                  ? "relative -top-4"
+                  : isActive
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
               )}
             >

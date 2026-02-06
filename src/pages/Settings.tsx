@@ -14,7 +14,8 @@ import {
   Moon,
   Sun,
   LogOut,
-  LogIn
+  LogIn,
+  Globe
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useAuth } from '@/components/auth/AuthContext';
@@ -23,8 +24,13 @@ import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import { usePWA } from '@/components/pwa/PWAContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 export default function Settings() {
+  const { t, i18n } = useTranslation();
   const { wallets, transactions } = useStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -45,24 +51,71 @@ export default function Settings() {
     }
   };
 
+  const handleLanguageChange = (lang: string) => {
+    i18n.changeLanguage(lang);
+    document.dir = lang === 'ur' ? 'rtl' : 'ltr';
+  };
+
   const handleExport = () => {
-    const data = {
-      wallets,
-      transactions,
-      exportedAt: new Date().toISOString(),
-    };
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `spendwise-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Title
+    doc.setFontSize(22);
+    doc.text('Hisabify Report', pageWidth / 2, 20, { align: 'center' });
 
-    toast.success('Data exported successfully');
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 30, { align: 'center' });
+
+    // Summary Section
+    const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
+    const totalIncome = transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalExpense = transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(14, 40, pageWidth - 28, 30, 'F');
+
+    doc.setFontSize(14);
+    doc.text('Summary', 20, 50);
+
+    doc.setFontSize(10);
+    doc.text(`Total Balance: ${totalBalance.toLocaleString()} PKR`, 20, 60);
+    doc.text(`Total Income: ${totalIncome.toLocaleString()} PKR`, 80, 60);
+    doc.text(`Total Expenses: ${totalExpense.toLocaleString()} PKR`, 140, 60);
+
+    // Transactions Table
+    const tableRows = transactions
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .map(t => {
+        const wallet = wallets.find(w => w.id === t.walletId);
+        const category = useStore.getState().categories.find(c => c.id === t.categoryId);
+        return [
+          new Date(t.date).toLocaleDateString(),
+          t.type.toUpperCase(),
+          category?.name || 'Unknown',
+          `${t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString()}`,
+          wallet?.name || 'Unknown',
+          t.reason
+        ];
+      });
+
+    autoTable(doc, {
+      startY: 80,
+      head: [['Date', 'Type', 'Category', 'Amount', 'Wallet', 'Description']],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0] }, // Black header
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      styles: { fontSize: 9 },
+    });
+
+    const fileName = `hisabify-report-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    toast.success('PDF Report exported successfully');
   };
 
   const handleClearData = () => {
@@ -137,7 +190,7 @@ export default function Settings() {
         {
           icon: Download,
           label: 'Export Data',
-          description: 'Download your data as JSON',
+          description: 'Download your data as PDF',
           action: handleExport,
         },
         {
@@ -169,7 +222,7 @@ export default function Settings() {
   ];
 
   return (
-    <AppLayout title="Settings">
+    <AppLayout title={t('settings.title')}>
       <div className="py-4 space-y-6">
         {/* App Info */}
         <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 animate-fade-in">
@@ -197,6 +250,44 @@ export default function Settings() {
             </div>
           </div>
         </Card>
+
+        {/* Data Management */}
+        <section className="space-y-3 animate-fade-in">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            {t('settings.data_management')}
+          </h3>
+          <Card className="divide-y divide-border/50">
+            <button
+              onClick={handleExport}
+              className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-primary/10 text-primary">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-sm">{t('settings.export_data')}</p>
+                  <p className="text-xs text-muted-foreground">Download all your data</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+
+            <button className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-primary/10 text-primary">
+                  <Download className="w-4 h-4 rotate-180" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-sm">{t('settings.import_data')}</p>
+                  <p className="text-xs text-muted-foreground">Restore from backup</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </Card>
+        </section>
 
         {/* Settings Groups */}
         {settingsGroups.map((group, groupIndex) => (

@@ -7,7 +7,10 @@ import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
 import { Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
+import { useTranslation } from 'react-i18next';
+
 export default function Wallets() {
+  const { t } = useTranslation();
   const { wallets, getTotalBalance } = useStore();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [editingWallet, setEditingWallet] = useState<any>(null); // Use proper type if available
@@ -22,7 +25,7 @@ export default function Wallets() {
   };
 
   return (
-    <AppLayout title="Wallets">
+    <AppLayout title={t('sidebar.wallets')}>
       <div className="py-4 space-y-6">
         {/* Total Balance */}
         <Card className="p-5 bg-secondary/50 border-border/50 animate-fade-in">

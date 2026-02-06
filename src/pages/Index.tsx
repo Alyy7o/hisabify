@@ -12,13 +12,16 @@ import { EditTransactionDialog } from '@/components/transaction/EditTransactionD
 import { TrendingUp, TrendingDown, Wallet, Plus, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export default function Index() {
   const { wallets, transactions, getTotalBalance, getMonthlyExpenses, getMonthlyIncome } = useStore();
   const { user } = useAuth();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [defaultTransactionType, setDefaultTransactionType] = useState<'income' | 'expense'>('expense');
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const { t } = useTranslation();
 
   const totalBalance = getTotalBalance();
   const monthlyExpenses = getMonthlyExpenses();
@@ -38,13 +41,13 @@ export default function Index() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout title={t('sidebar.dashboard')}>
       <div className="py-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between animate-fade-in">
           <div className="space-y-1">
             <p className="text-muted-foreground text-sm">
-              {user ? 'Welcome back 👋' : 'Welcome Guest 👋'}
+              {user ? t('dashboard.welcome_back', { name: user.user_metadata?.full_name || user.email?.split('@')[0] }) : t('dashboard.welcome_guest')}
             </p>
             <h1 className="text-2xl font-bold text-foreground">Hisabify</h1>
           </div>
@@ -53,12 +56,12 @@ export default function Index() {
               <>
                 <Link to="/login">
                   <Button variant="secondary" size="sm">
-                    Log in
+                    {t('auth.login')}
                   </Button>
                 </Link>
                 <Link to="/signup">
                   <Button size="sm">
-                    Sign up
+                    {t('auth.signup')}
                   </Button>
                 </Link>
               </>
@@ -70,7 +73,7 @@ export default function Index() {
         <Card className="p-6 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground animate-fade-in border-0 shadow-lg shadow-primary/20">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-primary-foreground/80 text-sm font-medium">Total Balance</p>
+              <p className="text-primary-foreground/80 text-sm font-medium">{t('dashboard.total_balance')}</p>
               <Wallet className="w-5 h-5 text-primary-foreground/60" />
             </div>
             <p className="text-3xl font-bold">{formatCurrency(totalBalance)}</p>
@@ -80,7 +83,7 @@ export default function Index() {
                   <TrendingUp className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-xs text-primary-foreground/70">Income</p>
+                  <p className="text-xs text-primary-foreground/70">{t('dashboard.income')}</p>
                   <p className="text-sm font-semibold">{formatCurrency(monthlyIncome)}</p>
                 </div>
               </div>
@@ -102,7 +105,10 @@ export default function Index() {
           <Button
             variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover:bg-success/10 hover:border-success hover:text-success transition-all"
-            onClick={() => setShowAddTransaction(true)}
+            onClick={() => {
+              setDefaultTransactionType('income');
+              setShowAddTransaction(true);
+            }}
           >
             <TrendingUp className="w-5 h-5" />
             <span className="text-sm font-medium">Add Income</span>
@@ -110,7 +116,10 @@ export default function Index() {
           <Button
             variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-all"
-            onClick={() => setShowAddTransaction(true)}
+            onClick={() => {
+              setDefaultTransactionType('expense');
+              setShowAddTransaction(true);
+            }}
           >
             <TrendingDown className="w-5 h-5" />
             <span className="text-sm font-medium">Add Expense</span>
@@ -120,12 +129,12 @@ export default function Index() {
         {/* Wallets Section */}
         <section className="space-y-3 animate-fade-in" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">My Wallets</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t('dashboard.my_wallets')}</h2>
             <Link
               to="/wallets"
               className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
             >
-              See all <ArrowRight className="w-4 h-4" />
+              {t('dashboard.see_all')} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
@@ -136,7 +145,7 @@ export default function Index() {
             >
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Plus className="w-8 h-8" />
-                <p className="text-sm font-medium">Add your first wallet</p>
+                <p className="text-sm font-medium">{t('dashboard.add_first_wallet')}</p>
               </div>
             </Card>
           ) : (
@@ -151,20 +160,20 @@ export default function Index() {
         {/* Recent Transactions */}
         <section className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Recent Transactions</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t('dashboard.recent_transactions')}</h2>
             <Link
               to="/analytics"
               className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
             >
-              See all <ArrowRight className="w-4 h-4" />
+              {t('dashboard.see_all')} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           {recentTransactions.length === 0 ? (
             <Card className="p-6 border-dashed">
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <p className="text-sm">No transactions yet</p>
-                <p className="text-xs">Start tracking your spending!</p>
+                <p className="text-sm">{t('dashboard.no_transactions_yet')}</p>
+                <p className="text-xs">{t('dashboard.start_tracking')}</p>
               </div>
             </Card>
           ) : (
@@ -187,6 +196,7 @@ export default function Index() {
       <AddTransactionDialog
         open={showAddTransaction}
         onOpenChange={setShowAddTransaction}
+        defaultType={defaultTransactionType}
       />
       <EditTransactionDialog
         open={!!editingTransaction}

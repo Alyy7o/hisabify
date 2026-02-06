@@ -1,0 +1,70 @@
+{
+    "common": {
+        "add": "Add",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "income": "Income",
+        "expense": "Expense",
+        "date": "Date",
+        "amount": "Amount",
+        "reason": "Reason",
+        "category": "Category",
+        "wallet": "Wallet",
+        "quick_actions": "Quick Actions",
+        "add_transaction": "Add Transaction",
+        "add_wallet": "Add Wallet"
+    },
+    "sidebar": {
+        "dashboard": "Dashboard",
+        "analytics": "Analytics",
+        "transactions": "Transactions",
+        "wallets": "Wallets",
+        "settings": "Settings",
+        "signOut": "Sign Out"
+    },
+    "dashboard": {
+        "total_balance": "Total Balance",
+        "monthly_summary": "Monthly Summary",
+        "quick_add": "Quick Add",
+        "recent_transactions": "Recent Transactions",
+        "no_transactions": "No transactions yet",
+        "view_all": "View All",
+        "welcome_back": "Welcome back, {{name}}",
+        "welcome_guest": "Welcome Guest",
+        "income": "Income",
+        "expense": "Expense",
+        "my_wallets": "My Wallets",
+        "see_all": "See all",
+        "add_first_wallet": "Add your first wallet",
+        "no_transactions_yet": "No transactions yet",
+        "start_tracking": "Start tracking your spending!"
+    },
+    "auth": {
+        "login": "Log in",
+        "signup": "Sign up"
+    },
+    "analytics": {
+        "title": "Analytics",
+        "daily": "Daily",
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "net_flow": "Net Flow",
+        "spending_by_category": "Spending by Category",
+        "daily_activity": "Daily Activity",
+        "monthly_activity": "Monthly Activity"
+    },
+    "settings": {
+        "title": "Settings",
+        "language": "Language",
+        "select_language": "Select Language",
+        "appearance": "Appearance",
+        "theme": "Theme",
+        "data_management": "Data Management",
+        "export_data": "Export Data (PDF)",
+        "import_data": "Import Data (JSON)",
+        "danger_zone": "Danger Zone",
+        "clear_data": "Clear All Data"
+    }
+}

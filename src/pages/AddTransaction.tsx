@@ -100,7 +100,7 @@ export default function AddTransaction() {
           <div className="space-y-2 animate-fade-in" style={{ animationDelay: '50ms' }}>
             <Label htmlFor="amount" className="text-foreground">Amount</Label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-muted-foreground">Rs</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">Rs</span>
               <Input
                 id="amount"
                 type="number"
