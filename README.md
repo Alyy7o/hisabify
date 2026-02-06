@@ -1,73 +1,45 @@
-# Welcome to your Lovable project
+# Hisabify - Personal Finance Manager
 
-## Project info
+Hisabify is more than just a finance tracker; it is a tool designed to empower users with clarity and control over their financial lives. In a world where mental accounting can be overwhelming, Hisabify provides a simple, intuitive, and private space to record, visualize, and analyze your financial journey.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🌟 Why Hisabify?
 
-## How can I edit this code?
+Effective money management starts with awareness. Hisabify was built on the core belief that managing personal finances should be **effortless**, **accessible**, and **private**. By removing complexity and focusing on what matters—your transactions and insights—Hisabify helps you make informed decisions about your spending and saving habits.
 
-There are several ways of editing your application.
+Whether you are tracking daily expenses, managing multiple income streams, or analyzing monthly trends, Hisabify adapts to your needs without the clutter of traditional finance apps.
 
-**Use Lovable**
+## 🚀 Core Functionalities
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 1. Smart Wallet Management
+Organize your money exactly how you keep it. Create multiple wallets for different purposes—Cash, Bank Accounts, Digital Wallets, or Savings Jars. Transfer funds between them and keep a precise tally of your total net worth in real-time.
 
-Changes made via Lovable will be committed automatically to this repo.
+### 2. Intuitive Transaction Tracking
+Recording a transaction takes seconds. Categorize your spending (Food, Transport, Utilities, etc.) and income sources with ease. The streamlined interface ensures that logging your finances becomes a habit, not a chore.
 
-**Use your preferred IDE**
+### 3. Comprehensive Analytics
+Turn data into insights. The built-in Analytics dashboard provides powerful visualizations:
+*   **Monthly Summaries**: See exactly how much came in and went out.
+*   **Category Breakdowns**: Understand where your money is going with colorful charts.
+*   **Trend Analysis**: Track your financial health over time.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 4. Privacy-First & Offline-Ready
+Your data belongs to you. Hisabify is built with a "Local-First" approach, meaning your financial data is stored securely on your device.
+*   **Offline Access**: Track transactions anywhere, anytime, without needing an internet connection.
+*   **Data Sync**: Optional cloud synchronization ensures you never lose your data, but privacy remains the priority.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 5. Seamless Localization (Urdu & English)
+Finance is universal, and language shouldn't be a barrier. Hisabify offers a complete bilingual experience:
+*   **Full Urdu Support**: Navigate the entire app in Urdu with a layout optimized for Right-to-Left (RTL) reading.
+*   **Instant Switching**: Toggle between English and Urdu instantly without restarting the app.
 
-Follow these steps:
+### 6. Data Export & Reports
+Need to share your expenses or analyze them further?
+*   **PDF Reports**: Generate professional summaries of your financial activity.
+*   **CSV Export**: Download your raw data for custom analysis in spreadsheet software like Excel or Google Sheets.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 7. Progressive Web App (PWA)
+Install Hisabify directly on your smartphone or desktop just like a native app. Enjoy a responsive, full-screen experience without the need for an app store download.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Hisabify is designed to be your daily companion for financial mindfulness. Start Hisabifying your life today!

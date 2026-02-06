@@ -15,7 +15,7 @@ export default function HelpFAQ() {
     ];
 
     return (
-        <AppLayout title={t('help_page.title')}>
+        <AppLayout title={t('help_page.title')}> 
             <div className="py-4 space-y-6">
                 {/* Support Contact */}
                 <Card className="bg-primary/5 border-primary/20">
