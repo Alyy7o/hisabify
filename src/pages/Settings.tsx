@@ -15,7 +15,8 @@ import {
   Sun,
   LogOut,
   LogIn,
-  Globe
+  Globe,
+  FileText
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useAuth } from '@/components/auth/AuthContext';
@@ -66,6 +67,52 @@ export default function Settings() {
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang);
     document.dir = lang === 'ur' ? 'rtl' : 'ltr';
+  };
+
+  const handleExportCSV = () => {
+    try {
+      // Define headers
+      const headers = ['Date', 'Type', 'Category', 'Amount', 'Wallet', 'Description'];
+
+      // Map transactions to rows
+      const rows = transactions
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .map(t => {
+          const wallet = wallets.find(w => w.id === t.walletId);
+          const category = useStore.getState().categories.find(c => c.id === t.categoryId);
+          const description = t.reason.replace(/"/g, '""'); // Escape double quotes
+
+          return [
+            new Date(t.date).toLocaleDateString(),
+            t.type,
+            category?.name || 'Unknown',
+            t.amount,
+            wallet?.name || 'Unknown',
+            `"${description}"` // Wrap description in quotes to handle commas/newlines
+          ].join(',');
+        });
+
+      // Combine headers and rows
+      const csvContent = [headers.join(','), ...rows].join('\n');
+
+      // Create blob and download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      const fileName = `hisabify_export_${new Date().toISOString().split('T')[0]}.csv`;
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('CSV exported successfully');
+    } catch (error) {
+      console.error('Export CSV error:', error);
+      toast.error('Failed to export CSV');
+    }
   };
 
   const handleExport = () => {
@@ -151,47 +198,52 @@ export default function Settings() {
 
   const settingsGroups = [
     {
-      title: 'App',
+      title: t('settings.app'),
       items: [
         {
+          id: 'install_app',
           icon: Smartphone,
-          label: 'Install App',
-          description: isInstalled ? 'App is installed' : 'Add to home screen',
+          label: t('settings.install_app'),
+          description: isInstalled ? t('settings.app_installed') : t('settings.add_to_home'),
           action: handleInstall,
           disabled: !isInstallable,
         },
       ],
     },
     {
-      title: 'Account',
+      title: t('settings.account'),
       items: [
         {
+          id: 'profile',
           icon: User,
-          label: 'Profile',
-          description: user ? user.email : 'Guest mode (local storage)',
+          label: t('settings.profile'),
+          description: user ? user.email : t('settings.guest_mode'),
           action: () => user ? null : navigate('/login'),
         },
         user ? {
+          id: 'sign_out',
           icon: LogOut,
-          label: 'Sign Out',
-          description: 'Log out of your account',
+          label: t('settings.sign_out'),
+          description: t('settings.sign_out_desc'),
           action: handleSignOut,
           destructive: true,
         } : {
+          id: 'sign_in',
           icon: LogIn,
-          label: 'Sign In',
-          description: 'Sync your data to the cloud',
+          label: t('settings.sign_in'),
+          description: t('settings.sign_in_desc'),
           action: () => navigate('/login'),
         },
       ].filter(Boolean),
     },
     {
-      title: 'Preferences',
+      title: t('settings.preferences'),
       items: [
         {
+          id: 'theme',
           icon: resolvedTheme === 'dark' ? Moon : Sun,
-          label: 'Dark Mode',
-          description: mounted ? (resolvedTheme === 'dark' ? 'On' : 'Off') : 'Loading...',
+          label: resolvedTheme === 'dark' ? t('settings.dark_mode') : t('settings.light_mode'),
+          description: mounted ? (resolvedTheme === 'dark' ? t('settings.on') : t('settings.off')) : 'Loading...',
           action: () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'),
           hasToggle: true,
           isToggled: mounted && resolvedTheme === 'dark',
@@ -199,36 +251,47 @@ export default function Settings() {
       ],
     },
     {
-      title: 'Data',
+      title: t('settings.data'),
       items: [
         {
+          id: 'export_csv',
+          icon: FileText,
+          label: t('settings.export_csv'),
+          description: t('settings.export_csv_desc'),
+          action: handleExportCSV,
+        },
+        {
+          id: 'export_data',
           icon: Download,
-          label: 'Export Data',
-          description: 'Download your data as PDF',
+          label: t('settings.export_data'),
+          description: t('settings.export_desc'),
           action: handleExport,
         },
         // {
+        //   id: 'clear_data',
         //   icon: Trash2,
-        //   label: 'Clear All Data',
-        //   description: 'Delete all wallets and transactions',
+        //   label: t('settings.clear_data'),
+        //   description: t('settings.clear_desc'),
         //   action: handleClearData,
         //   destructive: true,
         // },
       ],
     },
     {
-      title: 'Support',
+      title: t('settings.support'),
       items: [
         {
+          id: 'help_faq',
           icon: HelpCircle,
-          label: 'Help & FAQ',
-          description: 'Get help with Hisabify',
+          label: t('settings.help_faq'),
+          description: t('settings.help_desc'),
           action: () => toast.info('Help section coming soon!'),
         },
         {
+          id: 'privacy',
           icon: Shield,
-          label: 'Privacy',
-          description: 'Your data stays on your device',
+          label: t('settings.privacy'),
+          description: t('settings.privacy_desc'),
           action: () => toast.info('Your data is stored locally and never leaves your device.'),
         },
       ],
@@ -242,11 +305,11 @@ export default function Settings() {
           {/* App Info */}
           <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 animate-fade-in">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-2xl shadow-lg shadow-primary/20">
-                💰
+              <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center overflow-hidden shadow-lg shadow-primary/20">
+                <img src="/logo.png" alt="Hisabify" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h2 className="font-bold text-foreground text-lg">Hisabify</h2>
+                <h2 className="font-bold text-foreground text-lg">{i18n.language === 'ur' ? 'حساب فائی' : 'Hisabify'}</h2>
                 <p className="text-sm text-muted-foreground">Version 1.0.0 • {user ? 'Pro Plan' : 'Guest Mode'}</p>
               </div>
             </div>
@@ -317,13 +380,13 @@ export default function Settings() {
                   if (item.hasToggle) {
                     return (
                       <div
-                        key={item.label}
+                        key={item.id}
                         onClick={item.disabled ? undefined : item.action}
                         className={`w-full p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors text-left cursor-pointer ${item.destructive ? 'text-destructive' : ''
                           } ${item.disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                       >
                         <item.icon className={`w-5 h-5 ${item.destructive ? 'text-destructive' : 'text-muted-foreground'}`} />
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 text-start">
                           <p className={`font-medium text-sm ${item.destructive ? 'text-destructive' : 'text-foreground'}`}>
                             {item.label}
                           </p>
@@ -337,20 +400,20 @@ export default function Settings() {
                   }
                   return (
                     <button
-                      key={item.label}
+                      key={item.id}
                       onClick={item.action}
                       disabled={item.disabled}
                       className={`w-full p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${item.destructive ? 'text-destructive' : ''
                         }`}
                     >
                       <item.icon className={`w-5 h-5 ${item.destructive ? 'text-destructive' : 'text-muted-foreground'}`} />
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 text-start">
                         <p className={`font-medium text-sm ${item.destructive ? 'text-destructive' : 'text-foreground'}`}>
                           {item.label}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">{item.description}</p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <ChevronRight className={`w-4 h-4 text-muted-foreground shrink-0 ${i18n.language === 'ur' ? 'rotate-180' : ''}`} />
                     </button>
                   );
                 })}

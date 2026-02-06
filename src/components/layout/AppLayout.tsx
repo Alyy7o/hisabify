@@ -29,7 +29,7 @@ interface AppLayoutProps {
 export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth(); // Added user
   const { t, i18n } = useTranslation();
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddWallet, setShowAddWallet] = useState(false);
@@ -48,7 +48,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/login');
   };
 
   return (
@@ -102,15 +102,17 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
           </div>
         </nav>
 
-        <div className="p-4 border-t">
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Sign Out</span>
-          </button>
-        </div>
+        {user && (
+          <div className="p-4 border-t">
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">{t('sidebar.signOut')}</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Main Content Area */}
