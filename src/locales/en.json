@@ -119,5 +119,32 @@
         "version": "Version",
         "pro_plan": "Pro Plan",
         "made_with_love": "Made with ❤️ for better money management"
+    },
+    "help_page": {
+        "title": "Help & FAQ",
+        "faq_title": "Frequently Asked Questions",
+        "q1": "How do I add a transaction?",
+        "a1": "Tap the '+' button in the bottom navigation bar or on the dashboard to add a new income or expense.",
+        "q2": "Can I edit my wallets?",
+        "a2": "Yes, go to the Wallets page or Settings to manage your wallets.",
+        "q3": "Is my data secure?",
+        "a3": "Yes, your data is stored locally on your device and is not shared with anyone.",
+        "q4": "How do I change the currency?",
+        "a4": "Currently, the app supports PKR as the default currency.",
+        "contact_support": "Contact Support",
+        "contact_desc": "Need more help? Reach out to us.",
+        "email_us": "Email Us"
+    },
+    "privacy_page": {
+        "title": "Privacy Policy",
+        "last_updated": "Last Updated: February 2026",
+        "intro_title": "Introduction",
+        "intro_text": "Hisabify respects your privacy. This policy explains how we handle your data.",
+        "data_collection_title": "Data Collection",
+        "data_collection_text": "We do not collect any personal data. All your financial data is stored locally on your device.",
+        "data_usage_title": "Data Usage",
+        "data_usage_text": "Your data is used solely for the purpose of tracking your expenses and income within the app.",
+        "security_title": "Security",
+        "security_text": "We prioritize the security of your local data but recommend keeping your device secure."
     }
 }

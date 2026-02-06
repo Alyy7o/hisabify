@@ -285,17 +285,18 @@ export default function Settings() {
           icon: HelpCircle,
           label: t('settings.help_faq'),
           description: t('settings.help_desc'),
-          action: () => toast.info('Help section coming soon!'),
+          action: () => navigate('/help'),
         },
         {
           id: 'privacy',
           icon: Shield,
           label: t('settings.privacy'),
           description: t('settings.privacy_desc'),
-          action: () => toast.info('Your data is stored locally and never leaves your device.'),
+          action: () => navigate('/privacy'),
         },
       ],
     },
+
   ];
 
   return (

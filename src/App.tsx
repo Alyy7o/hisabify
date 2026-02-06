@@ -17,6 +17,8 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import HelpFAQ from "./pages/HelpFAQ";
+import Privacy from "./pages/Privacy";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +58,8 @@ const App = () => (
                 <Route path="/add" element={<AuthWrapper><AddTransaction /></AuthWrapper>} />
                 <Route path="/analytics" element={<AuthWrapper><Analytics /></AuthWrapper>} />
                 <Route path="/settings" element={<AuthWrapper><Settings /></AuthWrapper>} />
+                <Route path="/help" element={<AuthWrapper><HelpFAQ /></AuthWrapper>} />
+                <Route path="/privacy" element={<AuthWrapper><Privacy /></AuthWrapper>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
