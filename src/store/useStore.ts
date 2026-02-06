@@ -63,11 +63,15 @@ export const useStore = create<AppState>()(
         set((state) => ({ wallets: [...state.wallets, wallet] }));
         pushWalletToSupabase(wallet);
       },
-      updateWallet: (id, updates) => set((state) => ({
-        wallets: state.wallets.map((w) =>
-          w.id === id ? { ...w, ...updates } : w
-        ),
-      })),
+      updateWallet: (id, updates) => {
+        set((state) => ({
+          wallets: state.wallets.map((w) =>
+            w.id === id ? { ...w, ...updates } : w
+          ),
+        }));
+        const updatedWallet = get().wallets.find(w => w.id === id);
+        if (updatedWallet) pushWalletToSupabase(updatedWallet);
+      },
       deleteWallet: (id) => {
         set((state) => ({
           wallets: state.wallets.filter((w) => w.id !== id),
@@ -97,11 +101,15 @@ export const useStore = create<AppState>()(
         });
         pushTransactionToSupabase(transaction);
       },
-      updateTransaction: (id, updates) => set((state) => ({
-        transactions: state.transactions.map((t) =>
-          t.id === id ? { ...t, ...updates } : t
-        ),
-      })),
+      updateTransaction: (id, updates) => {
+        set((state) => ({
+          transactions: state.transactions.map((t) =>
+            t.id === id ? { ...t, ...updates } : t
+          ),
+        }));
+        const updatedTransaction = get().transactions.find(t => t.id === id);
+        if (updatedTransaction) pushTransactionToSupabase(updatedTransaction);
+      },
       deleteTransaction: (id) => {
         set((state) => {
           const transaction = state.transactions.find(t => t.id === id);
@@ -201,7 +209,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'hisab-storage',
+      name: 'hisabify-storage',
       // skipHydration REMOVED to fix local persistence
     }
   )

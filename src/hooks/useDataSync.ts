@@ -102,12 +102,38 @@ export function useDataSync() {
                     const { data: finalWallets } = await supabase.from('wallets').select('*').eq('user_id', user.id);
                     const { data: finalTransactions } = await supabase.from('transactions').select('*').eq('user_id', user.id);
 
-                    if (finalWallets) setWallets(finalWallets);
-                    if (finalTransactions) setTransactions(finalTransactions);
+                    // Map keys from snake_case (DB) to camelCase (Store)
+                    if (finalWallets) {
+                        const mappedWallets = finalWallets.map((w: any) => ({
+                            ...w,
+                            createdAt: w.created_at ? new Date(w.created_at) : new Date(),
+                        }));
+                        setWallets(mappedWallets);
+                    }
+                    if (finalTransactions) {
+                        const mappedTransactions = finalTransactions.map((t: any) => ({
+                            ...t,
+                            walletId: t.wallet_id,
+                            categoryId: t.category_id,
+                            date: new Date(t.date),
+                        }));
+                        setTransactions(mappedTransactions);
+                    }
                 } else {
-                    // Just set what we fetched
-                    setWallets(dbWallets || []);
-                    setTransactions(dbTransactions || []);
+                    // Just set what we fetched, but mapped
+                    const mappedWallets = (dbWallets || []).map((w: any) => ({
+                        ...w,
+                        createdAt: w.created_at ? new Date(w.created_at) : new Date(),
+                    }));
+                    setWallets(mappedWallets);
+
+                    const mappedTransactions = (dbTransactions || []).map((t: any) => ({
+                        ...t,
+                        walletId: t.wallet_id,
+                        categoryId: t.category_id,
+                        date: new Date(t.date),
+                    }));
+                    setTransactions(mappedTransactions);
                 }
 
             } catch (error) {

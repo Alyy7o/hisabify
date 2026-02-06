@@ -69,14 +69,27 @@ export default function Wallets() {
                 className="animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <WalletCard wallet={wallet} />
+                <WalletCard
+                  wallet={wallet}
+                  onEdit={(w) => {
+                    setEditingWallet(w);
+                    setShowAddWallet(true);
+                  }}
+                />
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <AddWalletDialog open={showAddWallet} onOpenChange={setShowAddWallet} />
+      <AddWalletDialog
+        open={showAddWallet}
+        onOpenChange={(open) => {
+          setShowAddWallet(open);
+          if (!open) setEditingWallet(null);
+        }}
+        initialData={editingWallet}
+      />
     </AppLayout>
   );
 }

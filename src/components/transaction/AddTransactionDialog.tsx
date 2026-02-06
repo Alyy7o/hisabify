@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,19 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      setType(defaultType);
+      setWalletId('');
+      setCategoryId('');
+      setAmount('');
+      setReason('');
+      setNotes('');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [open, defaultType]);
+
   const filteredCategories = categories.filter(
     c => c.type === type || c.type === 'both'
   );
@@ -31,7 +45,15 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletId || !categoryId || !amount || !reason.trim()) return;
-    
+
+    if (type === 'expense') {
+      const selectedWallet = wallets.find(w => w.id === walletId);
+      if (selectedWallet && selectedWallet.balance < parseFloat(amount)) {
+        toast.error('Insufficient balance in wallet');
+        return;
+      }
+    }
+
     addTransaction({
       id: crypto.randomUUID(),
       walletId,
@@ -42,13 +64,9 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
       notes: notes.trim() || undefined,
       date: new Date(date),
     });
-    
-    // Reset form
-    setAmount('');
-    setReason('');
-    setNotes('');
-    setDate(new Date().toISOString().split('T')[0]);
+
     onOpenChange(false);
+    toast.success('Transaction added');
   };
 
   return (
@@ -65,8 +83,8 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               onClick={() => setType('expense')}
               className={cn(
                 "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
-                type === 'expense' 
-                  ? "bg-destructive text-destructive-foreground" 
+                type === 'expense'
+                  ? "bg-destructive text-destructive-foreground"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -77,15 +95,15 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               onClick={() => setType('income')}
               className={cn(
                 "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
-                type === 'income' 
-                  ? "bg-success text-success-foreground" 
+                type === 'income'
+                  ? "bg-success text-success-foreground"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               Income
             </button>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="wallet">Wallet</Label>
             <Select value={walletId} onValueChange={setWalletId} required>
@@ -100,8 +118,13 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
                 ))}
               </SelectContent>
             </Select>
+            {walletId && (
+              <p className="text-lg font-medium text-muted-foreground text-center mt-1">
+                Balance: {wallets.find(w => w.id === walletId)?.currency} {wallets.find(w => w.id === walletId)?.balance.toLocaleString()}
+              </p>
+            )}
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId} required>
@@ -117,9 +140,9 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-1">
               <Label htmlFor="amount">Amount</Label>
               <Input
                 id="amount"
@@ -132,7 +155,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-1">
               <Label htmlFor="date">Date</Label>
               <Input
                 id="date"
@@ -143,7 +166,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="reason">Description</Label>
             <Input
@@ -154,7 +177,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optional)</Label>
             <Textarea
@@ -165,9 +188,9 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               rows={2}
             />
           </div>
-          
-          <Button 
-            type="submit" 
+
+          <Button
+            type="submit"
             className={cn(
               "w-full",
               type === 'income' && "bg-success hover:bg-success/90"
@@ -180,3 +203,4 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
     </Dialog>
   );
 }
+

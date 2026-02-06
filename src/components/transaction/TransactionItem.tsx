@@ -3,35 +3,56 @@ import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface TransactionItemProps {
   transaction: Transaction;
   onClick?: () => void;
+  onEdit?: (transaction: Transaction) => void;
 }
 
-export function TransactionItem({ transaction, onClick }: TransactionItemProps) {
-  const { categories, wallets } = useStore();
-  
+export function TransactionItem({ transaction, onClick, onEdit }: TransactionItemProps) {
+  const { categories, wallets, deleteTransaction } = useStore();
+
   const category = categories.find(c => c.id === transaction.categoryId);
   const wallet = wallets.find(w => w.id === transaction.walletId);
-  
+
   const formatCurrency = (amount: number) => {
     const currency = wallet?.currency || 'USD';
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-PK', {
       style: 'currency',
-      currency,
+      currency: 'PKR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this transaction?')) {
+      deleteTransaction(transaction.id);
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.(transaction);
+  };
+
   return (
-    <Card 
-      className="p-3 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in border-border/50"
+    <Card
+      className="p-3 cursor-pointer hover:shadow-md transition-all duration-200 animate-fade-in border-border/50 group relative"
       onClick={onClick}
     >
       <div className="flex items-center gap-3">
-        <div 
+        <div
           className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
           style={{ backgroundColor: (category?.color || '#888') + '20' }}
         >
@@ -45,12 +66,34 @@ export function TransactionItem({ transaction, onClick }: TransactionItemProps) 
             <span>{format(new Date(transaction.date), 'MMM d')}</span>
           </div>
         </div>
-        <p className={cn(
-          "font-semibold text-sm shrink-0",
-          transaction.type === 'income' ? "text-success" : "text-destructive"
-        )}>
-          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-        </p>
+
+        <div className="flex items-center gap-3">
+          <p className={cn(
+            "font-semibold text-sm shrink-0",
+            transaction.type === 'income' ? "text-success" : "text-destructive"
+          )}>
+            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+          </p>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                <span className="sr-only">Open menu</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleEdit}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </Card>
   );

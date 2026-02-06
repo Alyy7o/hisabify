@@ -8,6 +8,7 @@ import { WalletCard } from '@/components/wallet/WalletCard';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
 import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
 import { AddTransactionDialog } from '@/components/transaction/AddTransactionDialog';
+import { EditTransactionDialog } from '@/components/transaction/EditTransactionDialog';
 import { TrendingUp, TrendingDown, Wallet, Plus, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ export default function Index() {
   const { user } = useAuth();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
 
   const totalBalance = getTotalBalance();
   const monthlyExpenses = getMonthlyExpenses();
@@ -44,7 +46,7 @@ export default function Index() {
             <p className="text-muted-foreground text-sm">
               {user ? 'Welcome back 👋' : 'Welcome Guest 👋'}
             </p>
-            <h1 className="text-2xl font-bold text-foreground">Hisab</h1>
+            <h1 className="text-2xl font-bold text-foreground">Hisabify</h1>
           </div>
           <div className="flex gap-2">
             {!user && (
@@ -168,7 +170,13 @@ export default function Index() {
           ) : (
             <div className="space-y-2">
               {recentTransactions.map((transaction) => (
-                <TransactionItem key={transaction.id} transaction={transaction} />
+                <TransactionItem
+                  key={transaction.id}
+                  transaction={transaction}
+                  onEdit={(t) => {
+                    setEditingTransaction(t);
+                  }}
+                />
               ))}
             </div>
           )}
@@ -176,7 +184,15 @@ export default function Index() {
       </div>
 
       <AddWalletDialog open={showAddWallet} onOpenChange={setShowAddWallet} />
-      <AddTransactionDialog open={showAddTransaction} onOpenChange={setShowAddTransaction} />
+      <AddTransactionDialog
+        open={showAddTransaction}
+        onOpenChange={setShowAddTransaction}
+      />
+      <EditTransactionDialog
+        open={!!editingTransaction}
+        onOpenChange={(open) => !open && setEditingTransaction(null)}
+        transaction={editingTransaction}
+      />
     </AppLayout>
   );
 }

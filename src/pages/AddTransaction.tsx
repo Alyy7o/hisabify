@@ -39,6 +39,14 @@ export default function AddTransaction() {
       return;
     }
 
+    if (type === 'expense') {
+      const selectedWallet = wallets.find(w => w.id === walletId);
+      if (selectedWallet && selectedWallet.balance < parseFloat(amount)) {
+        toast.error('Insufficient balance in wallet');
+        return;
+      }
+    }
+
     addTransaction({
       id: crypto.randomUUID(),
       walletId,
