@@ -39,7 +39,9 @@
         "see_all": "See all",
         "add_first_wallet": "Add your first wallet",
         "no_transactions_yet": "No transactions yet",
-        "start_tracking": "Start tracking your spending!"
+        "start_tracking": "Start tracking your spending!",
+        "add_income": "Add Income",
+        "add_expense": "Add Expense"
     },
     "auth": {
         "login": "Log in",

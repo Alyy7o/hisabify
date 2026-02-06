@@ -60,7 +60,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
             <img src="/logo.png" alt="Hisabify" className="w-full h-full object-cover" />
           </div>
           <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            Hisabify
+            {i18n.language === 'ur' ? 'حساب فائی' : 'Hisabify'}
           </span>
         </div>
 

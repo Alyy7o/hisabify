@@ -18,10 +18,11 @@ export default function Index() {
   const { wallets, transactions, getTotalBalance, getMonthlyExpenses, getMonthlyIncome } = useStore();
   const { user } = useAuth();
   const [showAddWallet, setShowAddWallet] = useState(false);
+  const [editingWallet, setEditingWallet] = useState<any>(null);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<'income' | 'expense'>('expense');
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const totalBalance = getTotalBalance();
   const monthlyExpenses = getMonthlyExpenses();
@@ -49,7 +50,7 @@ export default function Index() {
             <p className="text-muted-foreground text-sm">
               {user ? t('dashboard.welcome_back', { name: user.user_metadata?.full_name || user.email?.split('@')[0] }) : t('dashboard.welcome_guest')}
             </p>
-            <h1 className="text-2xl font-bold text-foreground">Hisabify</h1>
+            <h1 className="text-2xl font-bold text-foreground">{i18n.language === 'ur' ? 'حساب فائی' : 'Hisabify'}</h1>
           </div>
           <div className="flex gap-2">
             {!user && (
@@ -92,7 +93,7 @@ export default function Index() {
                   <TrendingDown className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-xs text-primary-foreground/70">Expenses</p>
+                  <p className="text-xs text-primary-foreground/70">{t('dashboard.expense')}</p>
                   <p className="text-sm font-semibold">{formatCurrency(monthlyExpenses)}</p>
                 </div>
               </div>
@@ -111,7 +112,7 @@ export default function Index() {
             }}
           >
             <TrendingUp className="w-5 h-5" />
-            <span className="text-sm font-medium">Add Income</span>
+            <span className="text-sm font-medium">{t('dashboard.add_income')}</span>
           </Button>
           <Button
             variant="outline"
@@ -122,7 +123,7 @@ export default function Index() {
             }}
           >
             <TrendingDown className="w-5 h-5" />
-            <span className="text-sm font-medium">Add Expense</span>
+            <span className="text-sm font-medium">{t('dashboard.add_expense')}</span>
           </Button>
         </div>
 
@@ -151,7 +152,12 @@ export default function Index() {
           ) : (
             <div className="grid gap-3">
               {wallets.slice(0, 3).map((wallet) => (
-                <WalletCard key={wallet.id} wallet={wallet} compact />
+                <WalletCard
+                  key={wallet.id}
+                  wallet={wallet}
+                  compact
+                  onEdit={(w) => setEditingWallet(w)}
+                />
               ))}
             </div>
           )}
@@ -192,7 +198,14 @@ export default function Index() {
         </section>
       </div>
 
-      <AddWalletDialog open={showAddWallet} onOpenChange={setShowAddWallet} />
+      <AddWalletDialog
+        open={showAddWallet || !!editingWallet}
+        onOpenChange={(open) => {
+          setShowAddWallet(open);
+          if (!open) setEditingWallet(null);
+        }}
+        initialData={editingWallet}
+      />
       <AddTransactionDialog
         open={showAddTransaction}
         onOpenChange={setShowAddTransaction}

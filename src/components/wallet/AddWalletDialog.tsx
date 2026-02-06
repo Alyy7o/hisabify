@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { IconDisplay } from '@/components/common/IconDisplay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -135,19 +136,20 @@ export function AddWalletDialog({ open, onOpenChange, initialData }: AddWalletDi
           <div className="space-y-2">
             <Label>Icon</Label>
             <div className="flex gap-2 flex-wrap">
+
               {WALLET_ICONS.map((icon) => (
                 <button
                   key={icon}
                   type="button"
                   onClick={() => setSelectedIcon(icon)}
                   className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center text-lg border-2 transition-all",
+                    "w-10 h-10 rounded-lg flex items-center justify-center text-lg border-2 transition-all overflow-hidden",
                     selectedIcon === icon
                       ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50"
                   )}
                 >
-                  {icon}
+                  <IconDisplay icon={icon} className="w-6 h-6" />
                 </button>
               ))}
             </div>

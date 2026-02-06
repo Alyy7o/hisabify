@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { IconDisplay } from '@/components/common/IconDisplay';
 import { Transaction } from '@/lib/types';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
@@ -63,11 +64,12 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
         onClick={onClick}
       >
         <div className="flex items-center gap-3">
+
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 overflow-hidden"
             style={{ backgroundColor: (category?.color || '#888') + '20' }}
           >
-            {category?.icon || '📦'}
+            <IconDisplay icon={category?.icon || 'Box'} className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{transaction.reason}</p>

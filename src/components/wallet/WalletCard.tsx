@@ -1,4 +1,5 @@
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { IconDisplay } from '@/components/common/IconDisplay';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,21 +51,41 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit }: WalletC
       >
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-            style={{ backgroundColor: wallet.color + '20' }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 overflow-hidden"
+            style={{ backgroundColor: wallet.color + '20', color: wallet.color }}
           >
-            {wallet.icon}
+            <IconDisplay icon={wallet.icon} className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{wallet.name}</p>
             <p className="text-xs text-muted-foreground capitalize">{wallet.type}</p>
           </div>
-          <p className={cn(
-            "font-semibold text-sm",
-            wallet.balance >= 0 ? "text-success" : "text-destructive"
-          )}>
-            {formatCurrency(wallet.balance, wallet.currency)}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className={cn(
+              "font-semibold text-sm",
+              wallet.balance >= 0 ? "text-success" : "text-destructive"
+            )}>
+              {formatCurrency(wallet.balance, wallet.currency)}
+            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-6 w-6 p-0" onClick={(e) => e.stopPropagation()}>
+                  <span className="sr-only">Open menu</span>
+                  <MoreVertical className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleEdit}>
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </Card>
     );
@@ -77,10 +98,10 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit }: WalletC
     >
       <div className="flex items-start justify-between mb-3">
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform"
-          style={{ backgroundColor: wallet.color + '20' }}
+          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform overflow-hidden"
+          style={{ backgroundColor: wallet.color + '20', color: wallet.color }}
         >
-          {wallet.icon}
+          <IconDisplay icon={wallet.icon} className="w-6 h-6" />
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs px-2 py-1 rounded-full bg-secondary text-secondary-foreground capitalize">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { IconDisplay } from '@/components/common/IconDisplay';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
+import { Category } from '@/lib/types';
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -16,10 +18,11 @@ interface AddTransactionDialogProps {
 }
 
 export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expense' }: AddTransactionDialogProps) {
-  const { addTransaction, wallets, categories } = useStore();
+  const { addTransaction, wallets, categories, addCategory } = useStore();
   const [type, setType] = useState<'income' | 'expense'>(defaultType);
   const [walletId, setWalletId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [customCategoryName, setCustomCategoryName] = useState('');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -31,6 +34,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
       setType(defaultType);
       setWalletId('');
       setCategoryId('');
+      setCustomCategoryName('');
       setAmount('');
       setReason('');
       setNotes('');
@@ -54,10 +58,39 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
       }
     }
 
+    let finalCategoryId = categoryId;
+
+    if (categoryId === 'other') {
+      if (!customCategoryName.trim()) {
+        toast.error('Please enter a category name');
+        return;
+      }
+
+      // Check if category already exists (case-insensitive)
+      const existingCategory = categories.find(
+        c => c.name.toLowerCase() === customCategoryName.trim().toLowerCase()
+      );
+
+      if (existingCategory) {
+        finalCategoryId = existingCategory.id;
+      } else {
+        // Create new category
+        const newCategory: Category = {
+          id: crypto.randomUUID(),
+          name: customCategoryName.trim(),
+          icon: '📦', // Default icon
+          color: 'hsl(0, 0%, 50%)', // Default color
+          type: 'both' // Safer to make it available for both
+        };
+        addCategory(newCategory);
+        finalCategoryId = newCategory.id;
+      }
+    }
+
     addTransaction({
       id: crypto.randomUUID(),
       walletId,
-      categoryId,
+      categoryId: finalCategoryId,
       amount: parseFloat(amount),
       type,
       reason: reason.trim(),
@@ -113,7 +146,10 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               <SelectContent>
                 {wallets.map((wallet) => (
                   <SelectItem key={wallet.id} value={wallet.id}>
-                    {wallet.icon} {wallet.name}
+                    <div className="flex items-center gap-2">
+                      <IconDisplay icon={wallet.icon} className="w-4 h-4" />
+                      {wallet.name}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -134,12 +170,28 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               <SelectContent>
                 {filteredCategories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
-                    {category.icon} {category.name}
+                    <div className="flex items-center gap-2">
+                      <IconDisplay icon={category.icon} className="w-4 h-4" />
+                      {category.name}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {categoryId === 'other' && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+              <Label htmlFor="custom-category">Custom Category Name</Label>
+              <Input
+                id="custom-category"
+                placeholder="Enter category name..."
+                value={customCategoryName}
+                onChange={(e) => setCustomCategoryName(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2 col-span-1">

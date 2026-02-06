@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "Hisabify - Personal Finance Tracker",
+        name: "Hisabify",
         short_name: "Hisabify",
         description: "Track your expenses, manage wallets, and gain financial insights",
         theme_color: "#10b981",
