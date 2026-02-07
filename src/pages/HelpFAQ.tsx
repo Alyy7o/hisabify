@@ -24,7 +24,7 @@ export default function HelpFAQ() {
                             <MessageCircle className="w-8 h-8 text-primary" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg">{t('help_page.contact_support')}</h3>
+                            <h3 className="fontnpm run-bold text-lg">{t('help_page.contact_support')}</h3>
                             <p className="text-sm text-muted-foreground">{t('help_page.contact_desc')}</p>
                         </div>
                         <a

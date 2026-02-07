@@ -50,6 +50,8 @@ export function useDataSync() {
                 let newWallets = [...(dbWallets || [])];
                 let newTransactions = [...(dbTransactions || [])];
                 let hasChanges = false;
+                let walletUploadFailed = false;
+                let transactionUploadFailed = false;
 
                 // Simple check: If local has data but DB result is empty (or smaller), implies we might have guest data
                 const localWalletsToUpload = wallets.filter(w => !dbWallets?.find(dw => dw.id === w.id));
@@ -60,17 +62,19 @@ export function useDataSync() {
                         ...w,
                         user_id: user.id,
                         // Ensure types match DB
-                        created_at: new Date().toISOString() // Assuming w.createdAt handles this?
+                        created_at: w.createdAt ? new Date(w.createdAt).toISOString() : new Date().toISOString()
                     }));
 
                     // Remove client-side only fields or format them if needed
-                    const cleanWallets = walletsPayload.map(({ id, name, type, balance, currency, icon, color }) => ({
-                        id, user_id: user.id, name, type, balance, currency, icon, color
+                    const cleanWallets = walletsPayload.map(({ id, user_id, name, type, balance, currency, icon, color, created_at }) => ({
+                        id, user_id, name, type, balance, currency, icon, color, created_at
                     }));
 
                     const { error: uploadError } = await supabase.from('wallets').upsert(cleanWallets);
-                    if (uploadError) console.error('Error syncing wallets:', uploadError);
-                    else {
+                    if (uploadError) {
+                        console.error('Error syncing wallets:', uploadError);
+                        walletUploadFailed = true;
+                    } else {
                         hasChanges = true;
                         toast.success(`Synced ${localWalletsToUpload.length} wallets to cloud`);
                     }
@@ -90,19 +94,21 @@ export function useDataSync() {
                     }));
 
                     const { error: uploadError } = await supabase.from('transactions').upsert(cleanTransactions);
-                    if (uploadError) console.error('Error syncing transactions:', uploadError);
-                    else {
+                    if (uploadError) {
+                        console.error('Error syncing transactions:', uploadError);
+                        transactionUploadFailed = true;
+                    } else {
                         hasChanges = true;
                         toast.success(`Synced ${localTransactionsToUpload.length} transactions to cloud`);
                     }
                 }
 
-                // 3. If we uploaded new data, refuse the fetch to get the complete set
-                if (hasChanges) {
+                // 3. Logic to update store
+                if (hasChanges && !walletUploadFailed && !transactionUploadFailed) {
+                    // Perfect sync, fetch authoritative state
                     const { data: finalWallets } = await supabase.from('wallets').select('*').eq('user_id', user.id);
                     const { data: finalTransactions } = await supabase.from('transactions').select('*').eq('user_id', user.id);
 
-                    // Map keys from snake_case (DB) to camelCase (Store)
                     if (finalWallets) {
                         const mappedWallets = finalWallets.map((w: any) => ({
                             ...w,
@@ -120,20 +126,38 @@ export function useDataSync() {
                         setTransactions(mappedTransactions);
                     }
                 } else {
-                    // Just set what we fetched, but mapped
-                    const mappedWallets = (dbWallets || []).map((w: any) => ({
+                    // Partial sync or No sync needed.
+                    // If upload failed, we MUST MERGE db data with local data to avoid losing local changes.
+                    // If no sync needed, we just use db data (which should cover everything, or be empty).
+
+                    let mergedWallets = (dbWallets || []).map((w: any) => ({
                         ...w,
                         createdAt: w.created_at ? new Date(w.created_at) : new Date(),
                     }));
-                    setWallets(mappedWallets);
 
-                    const mappedTransactions = (dbTransactions || []).map((t: any) => ({
+                    let mergedTransactions = (dbTransactions || []).map((t: any) => ({
                         ...t,
                         walletId: t.wallet_id,
                         categoryId: t.category_id,
                         date: new Date(t.date),
                     }));
-                    setTransactions(mappedTransactions);
+
+                    if (walletUploadFailed) {
+                        // Merge missing local wallets back in
+                        const missingWallets = localWalletsToUpload.filter(lw => !mergedWallets.find(mw => mw.id === lw.id));
+                        mergedWallets = [...mergedWallets, ...missingWallets];
+                        toast.error("Failed to sync some wallets, keeping local copy.");
+                    }
+
+                    if (transactionUploadFailed) {
+                        // Merge missing local transactions back in
+                        const missingTransactions = localTransactionsToUpload.filter(lt => !mergedTransactions.find(mt => mt.id === lt.id));
+                        mergedTransactions = [...mergedTransactions, ...missingTransactions];
+                        toast.error("Failed to sync some transactions, keeping local copy.");
+                    }
+
+                    setWallets(mergedWallets);
+                    setTransactions(mergedTransactions);
                 }
 
             } catch (error) {
