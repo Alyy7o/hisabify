@@ -1,3 +1,10 @@
+import { IconDisplay } from '@/components/common/IconDisplay'; // Import added
+
+// ... (existing imports, but since we can't easily inject imports with replace_file_content without context of the top of the file, I will use multi_replace for the import and the body changes separately if needed, OR just use multi_replace for everything).
+
+// Actually, replace_file_content is better for contiguous blocks, but here I need to add an import at the top AND change the body. 
+// I will use multi_replace_file_content to handle both the import and the component updates in one go.
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -133,13 +140,16 @@ export default function AddTransaction() {
             ) : (
               <Select value={walletId} onValueChange={setWalletId} required>
                 <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Select wallet" />
+                  <div className="flex items-center gap-2">
+                    {walletId && <IconDisplay icon={wallets.find(w => w.id === walletId)?.icon || ''} className="w-5 h-5 text-primary" />}
+                    <SelectValue placeholder="Select wallet" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   {wallets.map((wallet) => (
                     <SelectItem key={wallet.id} value={wallet.id}>
                       <div className="flex items-center gap-2">
-                        <span>{wallet.icon}</span>
+                        <IconDisplay icon={wallet.icon} className="w-5 h-5 text-primary" />
                         <span>{wallet.name}</span>
                       </div>
                     </SelectItem>
@@ -154,13 +164,16 @@ export default function AddTransaction() {
             <Label htmlFor="category" className="text-foreground">Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId} required>
               <SelectTrigger className="h-12">
-                <SelectValue placeholder="Select category" />
+                <div className="flex items-center gap-2">
+                  {categoryId && <IconDisplay icon={categories.find(c => c.id === categoryId)?.icon || ''} className="w-5 h-5" />}
+                  <SelectValue placeholder="Select category" />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 {filteredCategories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     <div className="flex items-center gap-2">
-                      <span>{category.icon}</span>
+                      <IconDisplay icon={category.icon} className="w-5 h-5" />
                       <span>{category.name}</span>
                     </div>
                   </SelectItem>

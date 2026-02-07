@@ -153,6 +153,31 @@ export function useDataSync() {
                         // Merge missing local transactions back in
                         const missingTransactions = localTransactionsToUpload.filter(lt => !mergedTransactions.find(mt => mt.id === lt.id));
                         mergedTransactions = [...mergedTransactions, ...missingTransactions];
+
+                        // Update balances for wallets that exist in DB but don't have this transaction yet
+                        missingTransactions.forEach(t => {
+                            const walletIndex = mergedWallets.findIndex(w => w.id === t.walletId);
+                            if (walletIndex !== -1) {
+                                const wallet = mergedWallets[walletIndex];
+                                // Only update if this wallet came from DB (meaning it needs the transaction effect applied)
+                                // If it's a purely local wallet (newly created and failed to sync), it presumably already has the correct balance from the store state.
+                                const isFromDb = dbWallets?.find(dw => dw.id === wallet.id);
+
+                                if (isFromDb) {
+                                    const amount = Number(t.amount);
+                                    let newBalance = wallet.balance;
+
+                                    if (t.type === 'income') {
+                                        newBalance += amount;
+                                    } else if (t.type === 'expense') {
+                                        newBalance -= amount;
+                                    }
+
+                                    mergedWallets[walletIndex] = { ...wallet, balance: newBalance };
+                                }
+                            }
+                        });
+
                         toast.error("Failed to sync some transactions, keeping local copy.");
                     }
 
