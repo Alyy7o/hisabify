@@ -60,10 +60,16 @@ export const DEFAULT_CATEGORIES: Category[] = [
 
 export const WALLET_ICONS = ['Landmark', 'Banknote', 'CreditCard', 'PiggyBank', 'Coins', 'Wallet'];
 export const WALLET_COLORS = [
-  'hsl(160, 84%, 39%)',
-  'hsl(220, 70%, 50%)',
-  'hsl(280, 65%, 60%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(340, 75%, 55%)',
-  'hsl(0, 72%, 51%)',
+  'hsl(160, 84%, 39%)', // Green
+  'hsl(220, 70%, 50%)', // Blue
+  'hsl(280, 65%, 60%)', // Purple/Pink
+  'hsl(38, 92%, 50%)',  // Yellow
+  'hsl(340, 75%, 55%)', // Red/Pink
+  'hsl(0, 72%, 51%)',   // Red
+  '#000000',            // Black
+  '#ffffff',            // White
+  'hsl(0, 0%, 50%)',    // Gray
+  // 'hsl(262, 83%, 58%)', // Deep Purple
+  'hsl(24, 96%, 53%)',  // Orange
+  // 'hsl(173, 58%, 39%)', // Teal
 ];

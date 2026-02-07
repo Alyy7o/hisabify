@@ -140,10 +140,7 @@ export default function AddTransaction() {
             ) : (
               <Select value={walletId} onValueChange={setWalletId} required>
                 <SelectTrigger className="h-12">
-                  <div className="flex items-center gap-2">
-                    {walletId && <IconDisplay icon={wallets.find(w => w.id === walletId)?.icon || ''} className="w-5 h-5 text-primary" />}
-                    <SelectValue placeholder="Select wallet" />
-                  </div>
+                  <SelectValue placeholder="Select wallet" />
                 </SelectTrigger>
                 <SelectContent>
                   {wallets.map((wallet) => (
@@ -164,10 +161,7 @@ export default function AddTransaction() {
             <Label htmlFor="category" className="text-foreground">Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId} required>
               <SelectTrigger className="h-12">
-                <div className="flex items-center gap-2">
-                  {categoryId && <IconDisplay icon={categories.find(c => c.id === categoryId)?.icon || ''} className="w-5 h-5" />}
-                  <SelectValue placeholder="Select category" />
-                </div>
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {filteredCategories.map((category) => (
