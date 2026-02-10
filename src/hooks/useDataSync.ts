@@ -117,17 +117,35 @@ export function useDataSync() {
                 }
 
                 if (localTransactionsToUpload.length > 0) {
-                    const cleanTransactions = localTransactionsToUpload.map(({ id, walletId, amount, type, categoryId, reason, date, notes }) => ({
-                        id,
-                        user_id: user.id,
-                        wallet_id: walletId,
-                        amount,
-                        type,
-                        category_id: categoryId,
-                        reason,
-                        date: new Date(date).toISOString(),
-                        notes
-                    }));
+                    // 2.1 Re-fetch categories to be absolutely sure what we have on server
+                    const { data: currentDbCategories } = await supabase.from('categories').select('id');
+                    const validCategoryIds = new Set([
+                        ...(currentDbCategories?.map(c => c.id) || []),
+                        ...localCategoriesToUpload.map(c => c.id)
+                    ]);
+
+                    const cleanTransactions = localTransactionsToUpload.map(({ id, walletId, amount, type, categoryId, reason, date, notes }) => {
+                        let finalCategoryId = categoryId;
+                        let finalNotes = notes || '';
+
+                        if (!validCategoryIds.has(categoryId)) {
+                            console.warn(`Transaction ${id} has orphaned category ${categoryId}. Reassigning to 'other'.`);
+                            finalCategoryId = 'other';
+                            finalNotes = `${finalNotes} [System: Category was missing, originally ${categoryId}]`.trim();
+                        }
+
+                        return {
+                            id,
+                            user_id: user.id,
+                            wallet_id: walletId,
+                            amount,
+                            type,
+                            category_id: finalCategoryId,
+                            reason,
+                            date: new Date(date).toISOString(),
+                            notes: finalNotes
+                        };
+                    });
 
                     const { error: uploadError } = await supabase.from('transactions').upsert(cleanTransactions);
                     if (uploadError) {
