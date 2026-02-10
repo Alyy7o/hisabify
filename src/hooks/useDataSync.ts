@@ -118,11 +118,35 @@ export function useDataSync() {
 
                 if (localTransactionsToUpload.length > 0) {
                     // 2.1 Re-fetch categories to be absolutely sure what we have on server
-                    const { data: currentDbCategories } = await supabase.from('categories').select('id');
+                    const { data: currentDbCategories } = await supabase
+                        .from('categories')
+                        .select('id')
+                        .eq('user_id', user.id);
+
                     const validCategoryIds = new Set([
                         ...(currentDbCategories?.map(c => c.id) || []),
-                        ...localCategoriesToUpload.map(c => c.id)
+                        ...localCategoriesToUpload.map(c => c.id) // These were just uploaded hopefully
                     ]);
+
+                    // Ensure 'other' category exists if we need to fallback
+                    if (!validCategoryIds.has('other')) {
+                        console.log("Fallback category 'other' missing. Creating it...");
+                        const fallbackCategory = {
+                            id: 'other',
+                            user_id: user.id,
+                            name: 'Other',
+                            icon: 'Box',
+                            color: 'hsl(0, 0%, 50%)',
+                            type: 'both'
+                        };
+                        const { error: fallbackError } = await supabase.from('categories').upsert(fallbackCategory);
+                        if (fallbackError) {
+                            console.error("Failed to create fallback category:", fallbackError);
+                            // If this fails, next upsert might fail too, but we try.
+                        } else {
+                            validCategoryIds.add('other');
+                        }
+                    }
 
                     const cleanTransactions = localTransactionsToUpload.map(({ id, walletId, amount, type, categoryId, reason, date, notes }) => {
                         let finalCategoryId = categoryId;
@@ -155,6 +179,12 @@ export function useDataSync() {
                     } else {
                         hasChanges = true;
                         toast.success(`Synced ${localTransactionsToUpload.length} transactions to cloud`);
+
+                        // Optional: If we had to fix transactions, maybe alert the user
+                        const fixedCount = cleanTransactions.filter(t => t.category_id === 'other' && t.category_id !== localTransactionsToUpload.find(old => old.id === t.id)?.categoryId).length;
+                        if (fixedCount > 0) {
+                            toast.info(`Fixed ${fixedCount} transactions with missing categories`);
+                        }
                     }
                 }
 
