@@ -12,6 +12,7 @@ interface AppState {
   // Bulk Setters (for Sync)
   setWallets: (wallets: Wallet[]) => void;
   setTransactions: (transactions: Transaction[]) => void;
+  setCategories: (categories: Category[]) => void;
 
   // Wallet actions
   addWallet: (wallet: Wallet) => void;
@@ -57,6 +58,7 @@ export const useStore = create<AppState>()(
       // Bulk Setters
       setWallets: (wallets) => set({ wallets }),
       setTransactions: (transactions) => set({ transactions }),
+      setCategories: (categories) => set({ categories }),
 
       // Wallet actions
       addWallet: (wallet) => {
@@ -135,17 +137,27 @@ export const useStore = create<AppState>()(
       },
 
       // Category actions
-      addCategory: (category) => set((state) => ({
-        categories: [...state.categories, category]
-      })),
-      updateCategory: (id, updates) => set((state) => ({
-        categories: state.categories.map((c) =>
-          c.id === id ? { ...c, ...updates } : c
-        ),
-      })),
-      deleteCategory: (id) => set((state) => ({
-        categories: state.categories.filter((c) => c.id !== id),
-      })),
+      addCategory: (category) => {
+        set((state) => ({
+          categories: [...state.categories, category]
+        }));
+        pushCategoryToSupabase(category);
+      },
+      updateCategory: (id, updates) => {
+        set((state) => ({
+          categories: state.categories.map((c) =>
+            c.id === id ? { ...c, ...updates } : c
+          ),
+        }));
+        const updatedCategory = get().categories.find(c => c.id === id);
+        if (updatedCategory) pushCategoryToSupabase(updatedCategory);
+      },
+      deleteCategory: (id) => {
+        set((state) => ({
+          categories: state.categories.filter((c) => c.id !== id),
+        }));
+        deleteCategoryFromSupabase(id);
+      },
 
       // Budget actions
       addBudget: (budget) => set((state) => ({
@@ -308,5 +320,40 @@ async function deleteTransactionFromSupabase(id: string) {
   const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
   if (session.data.session?.user) {
     await import('@/lib/supabase').then(m => m.supabase.from('transactions').delete().eq('id', id));
+  }
+}
+
+async function pushCategoryToSupabase(category: Category) {
+  try {
+    const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
+    if (session.data.session?.user) {
+      console.log('Pushing category to Supabase:', category.name);
+      const { id, name, icon, color, type } = category;
+      const payload = {
+        id,
+        user_id: session.data.session!.user.id,
+        name,
+        icon,
+        color,
+        type
+      };
+
+      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('categories').upsert(payload));
+
+      if (error) {
+        console.error('Error syncing category:', error);
+      } else {
+        console.log('Category synced successfully');
+      }
+    }
+  } catch (err) {
+    console.error('Exception in pushCategoryToSupabase:', err);
+  }
+}
+
+async function deleteCategoryFromSupabase(id: string) {
+  const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
+  if (session.data.session?.user) {
+    await import('@/lib/supabase').then(m => m.supabase.from('categories').delete().eq('id', id));
   }
 }

@@ -9,8 +9,10 @@ export function useDataSync() {
     const {
         wallets,
         transactions,
+        categories,
         setWallets,
-        setTransactions
+        setTransactions,
+        setCategories
     } = useStore();
 
     useEffect(() => {
@@ -33,6 +35,13 @@ export function useDataSync() {
 
                 if (transactionsError) throw transactionsError;
 
+                const { data: dbCategories, error: categoriesError } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .eq('user_id', user.id);
+
+                if (categoriesError) throw categoriesError;
+
                 // 2. Check for local data that needs to be synced (Guest -> Login transition)
                 // We assume any wallet/transaction in local store that is NOT in DB needs to be uploaded
                 // HOWEVER, strictly speaking, we should only upload if it was created locally.
@@ -52,11 +61,14 @@ export function useDataSync() {
                 let hasChanges = false;
                 let walletUploadFailed = false;
                 let transactionUploadFailed = false;
+                let categoryUploadFailed = false;
                 let walletSyncError: any = null;
                 let transactionSyncError: any = null;
+                let categorySyncError: any = null;
 
                 // Simple check: If local has data but DB result is empty (or smaller), implies we might have guest data
                 const localWalletsToUpload = wallets.filter(w => !dbWallets?.find(dw => dw.id === w.id));
+                const localCategoriesToUpload = categories.filter(c => !dbCategories?.find(dc => dc.id === c.id));
                 const localTransactionsToUpload = transactions.filter(t => !dbTransactions?.find(dt => dt.id === t.id));
 
                 if (localWalletsToUpload.length > 0) {
@@ -80,6 +92,27 @@ export function useDataSync() {
                     } else {
                         hasChanges = true;
                         toast.success(`Synced ${localWalletsToUpload.length} wallets to cloud`);
+                    }
+                }
+
+                if (localCategoriesToUpload.length > 0) {
+                    const categoriesPayload = localCategoriesToUpload.map(c => ({
+                        id: c.id,
+                        user_id: user.id,
+                        name: c.name,
+                        icon: c.icon,
+                        color: c.color,
+                        type: c.type
+                    }));
+
+                    const { error: uploadError } = await supabase.from('categories').upsert(categoriesPayload);
+                    if (uploadError) {
+                        console.error('Error syncing categories:', uploadError);
+                        categoryUploadFailed = true;
+                        categorySyncError = uploadError;
+                    } else {
+                        hasChanges = true;
+                        toast.success(`Synced ${localCategoriesToUpload.length} categories to cloud`);
                     }
                 }
 
@@ -108,9 +141,13 @@ export function useDataSync() {
                 }
 
                 // 3. Logic to update store
-                if (hasChanges && !walletUploadFailed && !transactionUploadFailed) {
+                // Ensure we don't proceed to update store if critical syncs failed, but we might want partial updates?
+                // Actually, we should probably update what we can.
+
+                if (hasChanges && !walletUploadFailed && !transactionUploadFailed && !categoryUploadFailed) {
                     // Perfect sync, fetch authoritative state
                     const { data: finalWallets } = await supabase.from('wallets').select('*').eq('user_id', user.id);
+                    const { data: finalCategories } = await supabase.from('categories').select('*').eq('user_id', user.id);
                     const { data: finalTransactions } = await supabase.from('transactions').select('*').eq('user_id', user.id);
 
                     if (finalWallets) {
@@ -129,6 +166,9 @@ export function useDataSync() {
                         }));
                         setTransactions(mappedTransactions);
                     }
+                    if (finalCategories) {
+                        setCategories(finalCategories as any);
+                    }
                 } else {
                     // Partial sync or No sync needed.
                     // If upload failed, we MUST MERGE db data with local data to avoid losing local changes.
@@ -146,11 +186,21 @@ export function useDataSync() {
                         date: new Date(t.date),
                     }));
 
+                    let mergedCategories = (dbCategories || []).map((c: any) => ({
+                        ...c
+                    }));
+
                     if (walletUploadFailed) {
                         // Merge missing local wallets back in
                         const missingWallets = localWalletsToUpload.filter(lw => !mergedWallets.find(mw => mw.id === lw.id));
                         mergedWallets = [...mergedWallets, ...missingWallets];
                         toast.error(`Failed to sync wallets: ${walletSyncError?.message || 'Unknown error'}`);
+                    }
+
+                    if (categoryUploadFailed) {
+                        const missingCategories = localCategoriesToUpload.filter(lc => !mergedCategories.find(mc => mc.id === lc.id));
+                        mergedCategories = [...mergedCategories, ...missingCategories];
+                        toast.error(`Failed to sync categories: ${categorySyncError?.message || 'Unknown error'}`);
                     }
 
                     if (transactionUploadFailed) {
@@ -186,6 +236,7 @@ export function useDataSync() {
                     }
 
                     setWallets(mergedWallets);
+                    setCategories(mergedCategories);
                     setTransactions(mergedTransactions);
                 }
 
@@ -210,7 +261,7 @@ export function useDataSync() {
         };
 
         syncData();
-    }, [user, setWallets, setTransactions]);
+    }, [user, setWallets, setTransactions, setCategories]);
 
     return null;
 }
