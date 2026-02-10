@@ -52,6 +52,8 @@ export function useDataSync() {
                 let hasChanges = false;
                 let walletUploadFailed = false;
                 let transactionUploadFailed = false;
+                let walletSyncError: any = null;
+                let transactionSyncError: any = null;
 
                 // Simple check: If local has data but DB result is empty (or smaller), implies we might have guest data
                 const localWalletsToUpload = wallets.filter(w => !dbWallets?.find(dw => dw.id === w.id));
@@ -74,6 +76,7 @@ export function useDataSync() {
                     if (uploadError) {
                         console.error('Error syncing wallets:', uploadError);
                         walletUploadFailed = true;
+                        walletSyncError = uploadError;
                     } else {
                         hasChanges = true;
                         toast.success(`Synced ${localWalletsToUpload.length} wallets to cloud`);
@@ -97,6 +100,7 @@ export function useDataSync() {
                     if (uploadError) {
                         console.error('Error syncing transactions:', uploadError);
                         transactionUploadFailed = true;
+                        transactionSyncError = uploadError;
                     } else {
                         hasChanges = true;
                         toast.success(`Synced ${localTransactionsToUpload.length} transactions to cloud`);
@@ -146,7 +150,7 @@ export function useDataSync() {
                         // Merge missing local wallets back in
                         const missingWallets = localWalletsToUpload.filter(lw => !mergedWallets.find(mw => mw.id === lw.id));
                         mergedWallets = [...mergedWallets, ...missingWallets];
-                        toast.error("Failed to sync some wallets, keeping local copy.");
+                        toast.error(`Failed to sync wallets: ${walletSyncError?.message || 'Unknown error'}`);
                     }
 
                     if (transactionUploadFailed) {
@@ -178,7 +182,7 @@ export function useDataSync() {
                             }
                         });
 
-                        toast.error("Failed to sync some transactions, keeping local copy.");
+                        toast.error(`Failed to sync transactions: ${transactionSyncError?.message || 'Unknown error'}`);
                     }
 
                     setWallets(mergedWallets);
