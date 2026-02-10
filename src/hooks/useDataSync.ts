@@ -185,14 +185,28 @@ export function useDataSync() {
                     setTransactions(mergedTransactions);
                 }
 
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Data sync failed:', error);
-                toast.error('Failed to sync data');
+
+                let errorMessage = 'Failed to sync data';
+                if (error instanceof Error) {
+                    errorMessage = `Sync Error: ${error.message}`;
+                } else if (typeof error === 'object' && error !== null && 'message' in error) {
+                    errorMessage = `Sync Error: ${(error as any).message}`;
+                } else if (typeof error === 'string') {
+                    errorMessage = `Sync Error: ${error}`;
+                }
+
+                if (errorMessage.includes('Failed to fetch')) {
+                    errorMessage = 'Sync Error: Network request failed. Check your connection.';
+                }
+
+                toast.error(errorMessage);
             }
         };
 
         syncData();
-    }, [user]); // Run on user change (login)
+    }, [user, setWallets, setTransactions]);
 
     return null;
 }
