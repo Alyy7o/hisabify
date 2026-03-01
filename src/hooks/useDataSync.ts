@@ -4,6 +4,9 @@ import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
+let isSyncing = false;
+let lastSyncedUserId: string | null = null;
+
 export function useDataSync() {
     const { user } = useAuth();
     const {
@@ -17,8 +20,11 @@ export function useDataSync() {
 
     useEffect(() => {
         if (!user) return;
+        if (isSyncing) return;
+        if (lastSyncedUserId === user.id) return;
 
         const syncData = async () => {
+            isSyncing = true;
             try {
                 // 1. Fetch data from Supabase
                 const { data: dbWallets, error: walletsError } = await supabase
@@ -310,6 +316,9 @@ export function useDataSync() {
                 }
 
                 toast.error(errorMessage);
+            } finally {
+                isSyncing = false;
+                lastSyncedUserId = user.id;
             }
         };
 
