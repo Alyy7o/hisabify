@@ -97,7 +97,7 @@ export function useDataSync() {
 
                 if (localCategoriesToUpload.length > 0) {
                     const categoriesPayload = localCategoriesToUpload.map(c => ({
-                        id: c.id,
+                        id: `${user.id}_${c.id}`,
                         user_id: user.id,
                         name: c.name,
                         icon: c.icon,
@@ -125,14 +125,14 @@ export function useDataSync() {
 
                     const validCategoryIds = new Set([
                         ...(currentDbCategories?.map(c => c.id) || []),
-                        ...localCategoriesToUpload.map(c => c.id) // These were just uploaded hopefully
+                        ...localCategoriesToUpload.map(c => `${user.id}_${c.id}`) // These were just uploaded hopefully
                     ]);
 
                     // Ensure 'other' category exists if we need to fallback
-                    if (!validCategoryIds.has('other')) {
+                    if (!validCategoryIds.has(`${user.id}_other`)) {
                         console.log("Fallback category 'other' missing. Creating it...");
                         const fallbackCategory = {
-                            id: 'other',
+                            id: `${user.id}_other`,
                             user_id: user.id,
                             name: 'Other',
                             icon: 'Box',
@@ -144,7 +144,7 @@ export function useDataSync() {
                             console.error("Failed to create fallback category:", fallbackError);
                             // If this fails, next upsert might fail too, but we try.
                         } else {
-                            validCategoryIds.add('other');
+                            validCategoryIds.add(`${user.id}_other`);
                         }
                     }
 
@@ -152,7 +152,7 @@ export function useDataSync() {
                         let finalCategoryId = categoryId;
                         let finalNotes = notes || '';
 
-                        if (!validCategoryIds.has(categoryId)) {
+                        if (!validCategoryIds.has(`${user.id}_${categoryId}`)) {
                             console.warn(`Transaction ${id} has orphaned category ${categoryId}. Reassigning to 'other'.`);
                             finalCategoryId = 'other';
                             finalNotes = `${finalNotes} [System: Category was missing, originally ${categoryId}]`.trim();
@@ -164,7 +164,7 @@ export function useDataSync() {
                             wallet_id: walletId,
                             amount,
                             type,
-                            category_id: finalCategoryId,
+                            category_id: `${user.id}_${finalCategoryId}`,
                             reason,
                             date: new Date(date).toISOString(),
                             notes: finalNotes
@@ -209,13 +209,17 @@ export function useDataSync() {
                         const mappedTransactions = finalTransactions.map((t: any) => ({
                             ...t,
                             walletId: t.wallet_id,
-                            categoryId: t.category_id,
+                            categoryId: t.category_id.replace(`${user.id}_`, ''),
                             date: new Date(t.date),
                         }));
                         setTransactions(mappedTransactions);
                     }
                     if (finalCategories) {
-                        setCategories(finalCategories as any);
+                        const mappedCategories = finalCategories.map((c: any) => ({
+                            ...c,
+                            id: c.id.replace(`${user.id}_`, '')
+                        }));
+                        setCategories(mappedCategories as any);
                     }
                 } else {
                     // Partial sync or No sync needed.
@@ -230,12 +234,13 @@ export function useDataSync() {
                     let mergedTransactions = (dbTransactions || []).map((t: any) => ({
                         ...t,
                         walletId: t.wallet_id,
-                        categoryId: t.category_id,
+                        categoryId: t.category_id ? t.category_id.replace(`${user.id}_`, '') : '',
                         date: new Date(t.date),
                     }));
 
                     let mergedCategories = (dbCategories || []).map((c: any) => ({
-                        ...c
+                        ...c,
+                        id: c.id.replace(`${user.id}_`, '')
                     }));
 
                     if (walletUploadFailed) {

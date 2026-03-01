@@ -265,7 +265,7 @@ async function pushTransactionToSupabase(transaction: Transaction) {
         wallet_id: walletId,
         amount,
         type,
-        category_id: categoryId,
+        category_id: `${session.data.session!.user.id}_${categoryId}`,
         reason,
         date: new Date(date).toISOString(),
         notes
@@ -330,7 +330,7 @@ async function pushCategoryToSupabase(category: Category) {
       console.log('Pushing category to Supabase:', category.name);
       const { id, name, icon, color, type } = category;
       const payload = {
-        id,
+        id: `${session.data.session!.user.id}_${id}`,
         user_id: session.data.session!.user.id,
         name,
         icon,
@@ -354,6 +354,6 @@ async function pushCategoryToSupabase(category: Category) {
 async function deleteCategoryFromSupabase(id: string) {
   const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
   if (session.data.session?.user) {
-    await import('@/lib/supabase').then(m => m.supabase.from('categories').delete().eq('id', id));
+    await import('@/lib/supabase').then(m => m.supabase.from('categories').delete().eq('id', `${session.data.session!.user.id}_${id}`));
   }
 }
