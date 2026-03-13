@@ -9,7 +9,8 @@ import { TransactionItem } from '@/components/transaction/TransactionItem';
 import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
 import { AddTransactionDialog } from '@/components/transaction/AddTransactionDialog';
 import { EditTransactionDialog } from '@/components/transaction/EditTransactionDialog';
-import { TrendingUp, TrendingDown, Wallet, Plus, ArrowRight } from 'lucide-react';
+import { TransferDialog } from '@/components/wallet/TransferDialog';
+import { TrendingUp, TrendingDown, Wallet, Plus, ArrowRight, ArrowRightLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,7 @@ export default function Index() {
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<'income' | 'expense'>('expense');
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [showTransfer, setShowTransfer] = useState(false);
   const { t, i18n } = useTranslation();
 
   const totalBalance = getTotalBalance();
@@ -102,7 +104,7 @@ export default function Index() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="grid grid-cols-3 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
           <Button
             variant="outline"
             className="h-auto py-4 flex flex-col gap-2 hover:bg-success/10 hover:border-success hover:text-success transition-all"
@@ -124,6 +126,15 @@ export default function Index() {
           >
             <TrendingDown className="w-5 h-5" />
             <span className="text-sm font-medium">{t('dashboard.add_expense')}</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/10 hover:border-primary hover:text-primary transition-all"
+            onClick={() => setShowTransfer(true)}
+            disabled={wallets.length < 2}
+          >
+            <ArrowRightLeft className="w-5 h-5" />
+            <span className="text-sm font-medium">Transfer</span>
           </Button>
         </div>
 
@@ -215,6 +226,10 @@ export default function Index() {
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
         transaction={editingTransaction}
+      />
+      <TransferDialog
+        open={showTransfer}
+        onOpenChange={setShowTransfer}
       />
     </AppLayout>
   );

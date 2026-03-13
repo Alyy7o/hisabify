@@ -1,4 +1,4 @@
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, ArrowRightLeft } from 'lucide-react';
 import { IconDisplay } from '@/components/common/IconDisplay';
 import {
   DropdownMenu,
@@ -17,9 +17,10 @@ interface WalletCardProps {
   onClick?: () => void;
   compact?: boolean;
   onEdit?: (wallet: Wallet) => void;
+  onTransfer?: (wallet: Wallet) => void;
 }
 
-export function WalletCard({ wallet, onClick, compact = false, onEdit }: WalletCardProps) {
+export function WalletCard({ wallet, onClick, compact = false, onEdit, onTransfer }: WalletCardProps) {
   const { deleteWallet } = useStore();
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -41,6 +42,11 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit }: WalletC
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit?.(wallet);
+  };
+
+  const handleTransfer = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onTransfer?.(wallet);
   };
 
   if (compact) {
@@ -78,6 +84,10 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit }: WalletC
                 <DropdownMenuItem onClick={handleEdit}>
                   <Pencil className="mr-2 h-3.5 w-3.5" />
                   Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleTransfer}>
+                  <ArrowRightLeft className="mr-2 h-3.5 w-3.5" />
+                  Transfer
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
                   <Trash2 className="mr-2 h-3.5 w-3.5" />
@@ -118,6 +128,10 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit }: WalletC
               <DropdownMenuItem onClick={handleEdit}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleTransfer}>
+                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                Transfer
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" />

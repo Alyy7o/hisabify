@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
 import { WalletCard } from '@/components/wallet/WalletCard';
 import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
-import { Plus } from 'lucide-react';
+import { TransferDialog } from '@/components/wallet/TransferDialog';
+import { Plus, ArrowRightLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 import { useTranslation } from 'react-i18next';
@@ -13,6 +14,8 @@ export default function Wallets() {
   const { t } = useTranslation();
   const { wallets, getTotalBalance } = useStore();
   const [showAddWallet, setShowAddWallet] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferSourceWalletId, setTransferSourceWalletId] = useState('');
   const [editingWallet, setEditingWallet] = useState<any>(null); // Use proper type if available
 
   const formatCurrency = (amount: number) => {
@@ -40,14 +43,25 @@ export default function Wallets() {
           </div>
         </Card>
 
-        {/* Add Wallet Button */}
-        <Button
-          onClick={() => setShowAddWallet(true)}
-          className="w-full gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add New Wallet
-        </Button>
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => setShowAddWallet(true)}
+            className="w-full gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add New Wallet
+          </Button>
+          <Button
+            onClick={() => setShowTransfer(true)}
+            variant="secondary"
+            className="w-full gap-2"
+            disabled={wallets.length < 2}
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Transfer Funds
+          </Button>
+        </div>
 
         {/* Wallets Grid */}
         {wallets.length === 0 ? (
@@ -78,6 +92,10 @@ export default function Wallets() {
                     setEditingWallet(w);
                     setShowAddWallet(true);
                   }}
+                  onTransfer={(w) => {
+                    setTransferSourceWalletId(w.id);
+                    setShowTransfer(true);
+                  }}
                 />
               </div>
             ))}
@@ -92,6 +110,15 @@ export default function Wallets() {
           if (!open) setEditingWallet(null);
         }}
         initialData={editingWallet}
+      />
+
+      <TransferDialog
+        open={showTransfer}
+        onOpenChange={(open) => {
+          setShowTransfer(open);
+          if (!open) setTransferSourceWalletId('');
+        }}
+        defaultSourceWalletId={transferSourceWalletId}
       />
     </AppLayout>
   );

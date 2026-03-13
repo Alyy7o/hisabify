@@ -55,6 +55,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'salary', name: 'Salary', icon: 'Banknote', color: 'hsl(142, 76%, 36%)', type: 'income' },
   { id: 'freelance', name: 'Freelance', icon: 'Laptop', color: 'hsl(200, 70%, 50%)', type: 'income' },
   { id: 'investment', name: 'Investment', icon: 'TrendingUp', color: 'hsl(160, 60%, 45%)', type: 'income' },
+  { id: 'transfer', name: 'Transfer', icon: 'ArrowRightLeft', color: 'hsl(210, 20%, 50%)', type: 'both' },
   { id: 'other', name: 'Other', icon: 'Box', color: 'hsl(0, 0%, 50%)', type: 'both' },
 ];
 
