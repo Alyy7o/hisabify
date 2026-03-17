@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider, useAuth } from "@/components/auth/AuthContext";
 import { PWAProvider } from "@/components/pwa/PWAContext";
 import { useDataSync } from "@/hooks/useDataSync";
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import Index from "./pages/Index";
 import Wallets from "./pages/Wallets";
 import AddTransaction from "./pages/AddTransaction";
@@ -65,6 +66,7 @@ const App = () => (
             </BrowserRouter>
           </PWAProvider>
         </AuthProvider>
+        <VercelAnalytics />
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
