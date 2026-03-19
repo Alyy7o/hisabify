@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Wallet, Transaction, Category, Budget, Goal, DEFAULT_CATEGORIES } from '@/lib/types';
+import { toast } from 'sonner';
 
 interface AppState {
   wallets: Wallet[];
@@ -233,8 +234,18 @@ async function pushWalletToSupabase(wallet: Wallet) {
     const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
     if (session.data.session?.user) {
       console.log('Pushing wallet to Supabase:', wallet.name);
-      const { id, name, type, balance, currency, icon, color } = wallet;
-      const payload = { id, user_id: session.data.session!.user.id, name, type, balance, currency, icon, color };
+      const { id, name, type, balance, currency, icon, color, createdAt } = wallet;
+      const payload = { 
+        id, 
+        user_id: session.data.session!.user.id, 
+        name, 
+        type, 
+        balance, 
+        currency, 
+        icon, 
+        color,
+        created_at: createdAt ? new Date(createdAt).toISOString() : new Date().toISOString()
+      };
 
       console.log('Wallet Payload:', JSON.stringify(payload, null, 2));
 
@@ -242,6 +253,7 @@ async function pushWalletToSupabase(wallet: Wallet) {
 
       if (error) {
         console.error('Error syncing wallet:', error);
+        toast.error(`Failed to save wallet: ${error.message}`);
       } else {
         console.log('Wallet synced successfully');
       }
@@ -299,6 +311,7 @@ async function pushTransactionToSupabase(transaction: Transaction) {
           }
         } else {
           console.error('Error syncing transaction:', error);
+          toast.error(`Failed to save transaction: ${error.message}`);
         }
       } else {
         console.log('Transaction synced successfully');
@@ -342,6 +355,7 @@ async function pushCategoryToSupabase(category: Category) {
 
       if (error) {
         console.error('Error syncing category:', error);
+        toast.error(`Failed to save category: ${error.message}`);
       } else {
         console.log('Category synced successfully');
       }
