@@ -235,6 +235,29 @@ async function pushWalletToSupabase(wallet: Wallet) {
     if (session.data.session?.user) {
       console.log('Pushing wallet to Supabase:', wallet.name);
       const { id, name, type, balance, currency, icon, color, createdAt } = wallet;
+      
+      // Safely handle createdAt field conversion
+      let created_at: string;
+      if (createdAt) {
+        try {
+          // Handle different formats: Date object, ISO string, or timestamp
+          if (createdAt instanceof Date) {
+            created_at = createdAt.toISOString();
+          } else if (typeof createdAt === 'string') {
+            // If it's already an ISO string, use it directly
+            created_at = new Date(createdAt).toISOString();
+          } else {
+            // Fallback to current time
+            created_at = new Date().toISOString();
+          }
+        } catch (dateError) {
+          console.warn('Failed to parse createdAt, using current time:', dateError);
+          created_at = new Date().toISOString();
+        }
+      } else {
+        created_at = new Date().toISOString();
+      }
+
       const payload = { 
         id, 
         user_id: session.data.session!.user.id, 
@@ -244,7 +267,7 @@ async function pushWalletToSupabase(wallet: Wallet) {
         currency, 
         icon, 
         color,
-        created_at: createdAt ? new Date(createdAt).toISOString() : new Date().toISOString()
+        created_at
       };
 
       console.log('Wallet Payload:', JSON.stringify(payload, null, 2));
@@ -256,12 +279,14 @@ async function pushWalletToSupabase(wallet: Wallet) {
         toast.error(`Failed to save wallet: ${error.message}`);
       } else {
         console.log('Wallet synced successfully');
+        toast.success('Wallet updated successfully');
       }
     } else {
       console.log('No user session found, performing local only update');
     }
   } catch (err) {
     console.error('Exception in pushWalletToSupabase:', err);
+    toast.error('Failed to sync wallet changes. Please check your connection.');
   }
 }
 
@@ -271,6 +296,22 @@ async function pushTransactionToSupabase(transaction: Transaction) {
     if (session.data.session?.user) {
       console.log('Pushing transaction to Supabase');
       const { id, walletId, amount, type, categoryId, reason, date, notes } = transaction;
+      
+      // Safely handle date conversion
+      let transactionDate: string;
+      try {
+        if (date instanceof Date) {
+          transactionDate = date.toISOString();
+        } else if (typeof date === 'string') {
+          transactionDate = new Date(date).toISOString();
+        } else {
+          transactionDate = new Date().toISOString();
+        }
+      } catch (dateError) {
+        console.warn('Failed to parse transaction date, using current time:', dateError);
+        transactionDate = new Date().toISOString();
+      }
+
       const payload = {
         id,
         user_id: session.data.session!.user.id,
@@ -279,7 +320,7 @@ async function pushTransactionToSupabase(transaction: Transaction) {
         type,
         category_id: `${session.data.session!.user.id}_${categoryId}`,
         reason,
-        date: new Date(date).toISOString(),
+        date: transactionDate,
         notes
       };
 
@@ -302,12 +343,15 @@ async function pushTransactionToSupabase(transaction: Transaction) {
 
             if (retryError) {
               console.error('Error syncing transaction after wallet retry:', retryError);
+              toast.error(`Failed to save transaction: ${retryError.message}`);
             } else {
               console.log('Transaction synced successfully after wallet retry');
+              toast.success('Transaction saved successfully');
             }
           } else {
             console.error('Local wallet not found for transaction:', walletId);
             console.log('Available wallets:', useStore.getState().wallets.map(w => w.id));
+            toast.error('Cannot save transaction: associated wallet not found');
           }
         } else {
           console.error('Error syncing transaction:', error);
@@ -315,10 +359,12 @@ async function pushTransactionToSupabase(transaction: Transaction) {
         }
       } else {
         console.log('Transaction synced successfully');
+        toast.success('Transaction saved successfully');
       }
     }
   } catch (err) {
     console.error('Exception in pushTransactionToSupabase:', err);
+    toast.error('Failed to sync transaction. Please check your connection.');
   }
 }
 
@@ -358,10 +404,12 @@ async function pushCategoryToSupabase(category: Category) {
         toast.error(`Failed to save category: ${error.message}`);
       } else {
         console.log('Category synced successfully');
+        toast.success('Category saved successfully');
       }
     }
   } catch (err) {
     console.error('Exception in pushCategoryToSupabase:', err);
+    toast.error('Failed to sync category. Please check your connection.');
   }
 }
 
