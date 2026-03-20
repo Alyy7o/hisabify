@@ -46,8 +46,18 @@ export default function Signup() {
         }
     };
 
-    const handleGoogleSignup = () => {
-        toast.info('Coming soon');
+    const handleGoogleSignup = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/`,
+                },
+            });
+            if (error) throw error;
+        } catch (error: any) {
+            toast.error(error.message || t('auth.error_google'));
+        }
     };
 
     return (
