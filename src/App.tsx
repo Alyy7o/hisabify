@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Wallets from "./pages/Wallets";
 import AddTransaction from "./pages/AddTransaction";
 import Analytics from "./pages/Analytics";
+import Settlements from "./pages/Settlements";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
@@ -56,6 +57,7 @@ const App = () => (
                 <Route path="/" element={<AuthWrapper><Index /></AuthWrapper>} />
                 <Route path="/wallets" element={<AuthWrapper><Wallets /></AuthWrapper>} />
                 <Route path="/add" element={<AuthWrapper><AddTransaction /></AuthWrapper>} />
+                <Route path="/settlements" element={<AuthWrapper><Settlements /></AuthWrapper>} />
                 <Route path="/analytics" element={<AuthWrapper><Analytics /></AuthWrapper>} />
                 <Route path="/settings" element={<AuthWrapper><Settings /></AuthWrapper>} />
                 <Route path="/help" element={<AuthWrapper><HelpFAQ /></AuthWrapper>} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,24 +7,28 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { WalletCard } from '@/components/wallet/WalletCard';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
 import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
-import { AddTransactionDialog } from '@/components/transaction/AddTransactionDialog';
 import { EditTransactionDialog } from '@/components/transaction/EditTransactionDialog';
-import { TransferDialog } from '@/components/wallet/TransferDialog';
-import { TrendingUp, TrendingDown, Wallet, Plus, ArrowRight, ArrowRightLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { TrendingUp, TrendingDown, Wallet, Plus, ArrowRight, ArrowRightLeft, HandCoins, Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 
 export default function Index() {
+  const navigate = useNavigate();
   const { wallets, transactions, getTotalBalance, getMonthlyExpenses, getMonthlyIncome } = useStore();
   const { user } = useAuth();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [editingWallet, setEditingWallet] = useState<any>(null);
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
-  const [defaultTransactionType, setDefaultTransactionType] = useState<'income' | 'expense'>('expense');
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
-  const [showTransfer, setShowTransfer] = useState(false);
+  const [showBalance, setShowBalance] = useState(() => {
+    const storedValue = localStorage.getItem('dashboard-show-balance');
+    return storedValue ? storedValue === 'true' : true;
+  });
   const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    localStorage.setItem('dashboard-show-balance', String(showBalance));
+  }, [showBalance]);
 
   const totalBalance = getTotalBalance();
   const monthlyExpenses = getMonthlyExpenses();
@@ -77,9 +81,35 @@ export default function Index() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-primary-foreground/80 text-sm font-medium">{t('dashboard.total_balance')}</p>
-              <Wallet className="w-5 h-5 text-primary-foreground/60" />
             </div>
-            <p className="text-3xl font-bold">{formatCurrency(totalBalance)}</p>
+            <div className="flex items-center gap-3">
+              <div className="relative inline-flex min-h-9 items-center">
+                <p
+                  className={cn(
+                    "text-3xl font-bold tracking-tight transition-all duration-200 ease-in-out",
+                    showBalance ? "opacity-100 translate-y-0 scale-100" : "pointer-events-none absolute opacity-0 -translate-y-1 scale-95"
+                  )}
+                >
+                  {formatCurrency(totalBalance)}
+                </p>
+                <p
+                  className={cn(
+                    "text-3xl font-bold tracking-tight transition-all duration-200 ease-in-out",
+                    showBalance ? "pointer-events-none absolute opacity-0 translate-y-1 scale-95" : "opacity-100 translate-y-0 scale-100"
+                  )}
+                >
+                  ********
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBalance((value) => !value)}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-primary-foreground/80 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+              >
+                {showBalance ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
             <div className="flex gap-4 pt-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
@@ -104,42 +134,43 @@ export default function Index() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-3 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex flex-col gap-2 hover:bg-success/10 hover:border-success hover:text-success transition-all"
-            onClick={() => {
-              setDefaultTransactionType('income');
-              setShowAddTransaction(true);
-            }}
+        <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <button
+            type="button"
+            className="h-auto py-5 px-4 rounded-xl border border-border bg-card hover:bg-success/10 hover:border-success/50 transition-all flex flex-col items-center gap-2"
+            onClick={() => navigate('/add?type=income')}
           >
-            <TrendingUp className="w-5 h-5" />
+            <TrendingUp className="w-5 h-5 text-success" />
             <span className="text-sm font-medium">{t('dashboard.add_income')}</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex flex-col gap-2 hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-all"
-            onClick={() => {
-              setDefaultTransactionType('expense');
-              setShowAddTransaction(true);
-            }}
+          </button>
+          <button
+            type="button"
+            className="h-auto py-5 px-4 rounded-xl border border-border bg-card hover:bg-destructive/10 hover:border-destructive/50 transition-all flex flex-col items-center gap-2"
+            onClick={() => navigate('/add?type=expense')}
           >
-            <TrendingDown className="w-5 h-5" />
+            <TrendingDown className="w-5 h-5 text-destructive" />
             <span className="text-sm font-medium">{t('dashboard.add_expense')}</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/10 hover:border-primary hover:text-primary transition-all"
-            onClick={() => setShowTransfer(true)}
-            disabled={wallets.length < 2}
+          </button>
+          <button
+            type="button"
+            className="h-auto py-5 px-4 rounded-xl border border-border bg-card hover:bg-primary/10 hover:border-primary/50 transition-all flex flex-col items-center gap-2"
+            onClick={() => navigate('/wallets?transfer=1')}
           >
-            <ArrowRightLeft className="w-5 h-5" />
+            <ArrowRightLeft className="w-5 h-5 text-primary" />
             <span className="text-sm font-medium">Transfer</span>
-          </Button>
+          </button>
+          <button
+            type="button"
+            className="h-auto py-5 px-4 rounded-xl border border-border bg-card hover:bg-primary/10 hover:border-primary/50 transition-all flex flex-col items-center gap-2"
+            onClick={() => navigate('/settlements')}
+          >
+            <HandCoins className="w-5 h-5 text-primary" />
+            <span className="text-sm font-medium">Settlements</span>
+          </button>
         </div>
 
         {/* Wallets Section */}
-        <section className="space-y-3 animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <section className="space-y-3 animate-fade-in" style={{ animationDelay: '220ms' }}>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">{t('dashboard.my_wallets')}</h2>
             <Link
@@ -175,7 +206,7 @@ export default function Index() {
         </section>
 
         {/* Recent Transactions */}
-        <section className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <section className="space-y-3 animate-fade-in" style={{ animationDelay: '320ms' }}>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">{t('dashboard.recent_transactions')}</h2>
             <Link
@@ -217,19 +248,10 @@ export default function Index() {
         }}
         initialData={editingWallet}
       />
-      <AddTransactionDialog
-        open={showAddTransaction}
-        onOpenChange={setShowAddTransaction}
-        defaultType={defaultTransactionType}
-      />
       <EditTransactionDialog
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
         transaction={editingTransaction}
-      />
-      <TransferDialog
-        open={showTransfer}
-        onOpenChange={setShowTransfer}
       />
     </AppLayout>
   );

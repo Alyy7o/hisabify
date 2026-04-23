@@ -46,16 +46,22 @@ export default function Settings() {
   const { wallets, transactions } = useStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { isInstallable, isInstalled, installApp } = usePWA();
+  const { isInstallable, isInstalled, isIos, installApp } = usePWA();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [showClearDataDialog, setShowClearDataDialog] = useState(false);
+  const [showIosInstallHelp, setShowIosInstallHelp] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const handleInstall = async () => {
+    if (isIos && !isInstalled) {
+      setShowIosInstallHelp(true);
+      return;
+    }
+
     const installed = await installApp();
     if (installed) {
       toast.success('App installed successfully!');
@@ -204,9 +210,13 @@ export default function Settings() {
           id: 'install_app',
           icon: Smartphone,
           label: t('settings.install_app'),
-          description: isInstalled ? t('settings.app_installed') : t('settings.add_to_home'),
+          description: isInstalled
+            ? t('settings.app_installed')
+            : isIos
+              ? 'On iPhone, use Share and choose Add to Home Screen'
+              : t('settings.add_to_home'),
           action: handleInstall,
-          disabled: !isInstallable,
+          disabled: !isInstallable && !isIos,
         },
       ],
     },
@@ -445,6 +455,26 @@ export default function Settings() {
             <AlertDialogAction onClick={confirmClearData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Continue
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showIosInstallHelp} onOpenChange={setShowIosInstallHelp}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add Hisabify to iPhone</AlertDialogTitle>
+            <AlertDialogDescription>
+              iPhone Chrome does not show the native install prompt. Use the share menu instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>1. Open this app in Safari.</p>
+            <p>2. Tap the Share button.</p>
+            <p>3. Choose Add to Home Screen.</p>
+            <p>4. Tap Add.</p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
@@ -11,12 +12,22 @@ import { Card } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
 
 export default function Wallets() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { wallets, getTotalBalance } = useStore();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferSourceWalletId, setTransferSourceWalletId] = useState('');
   const [editingWallet, setEditingWallet] = useState<any>(null); // Use proper type if available
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('transfer') === '1' && wallets.length >= 2) {
+      setShowTransfer(true);
+      navigate('/wallets', { replace: true });
+    }
+  }, [location.search, wallets.length, navigate]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PK', {

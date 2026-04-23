@@ -45,6 +45,43 @@ export interface Goal {
   icon: string;
 }
 
+export type SettlementKind = 'given' | 'received';
+export type SettlementStatus = 'active' | 'completed';
+export type SettlementMovementKind = 'initial' | 'payment';
+export type SettlementMovementDirection = 'inflow' | 'outflow';
+
+export interface SettlementMovement {
+  id: string;
+  settlementId: string;
+  kind: SettlementMovementKind;
+  direction: SettlementMovementDirection;
+  amount: number;
+  walletId?: string;
+  applyToWallet: boolean;
+  note?: string;
+  date: Date;
+}
+
+export interface Settlement {
+  id: string;
+  personName: string;
+  title: string;
+  kind: SettlementKind;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: SettlementStatus;
+  dueDate?: Date;
+  walletId?: string;
+  notes?: string;
+  splitTotalAmount?: number;
+  splitPeopleCount?: number;
+  yourShare?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  movements: SettlementMovement[];
+}
+
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'food', name: 'Food & Dining', icon: 'Utensils', color: 'hsl(38, 92%, 50%)', type: 'expense' },
   { id: 'transport', name: 'Transport', icon: 'Car', color: 'hsl(220, 70%, 50%)', type: 'expense' },

@@ -5,8 +5,8 @@ import { IconDisplay } from '@/components/common/IconDisplay'; // Import added
 // Actually, replace_file_content is better for contiguous blocks, but here I need to add an import at the top AND change the body. 
 // I will use multi_replace_file_content to handle both the import and the component updates in one go.
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 
 export default function AddTransaction() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addTransaction, wallets, categories } = useStore();
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [walletId, setWalletId] = useState('');
@@ -28,6 +29,14 @@ export default function AddTransaction() {
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const typeParam = params.get('type');
+    if (typeParam === 'income' || typeParam === 'expense') {
+      setType(typeParam);
+    }
+  }, [location.search]);
 
   const filteredCategories = categories.filter(
     c => c.type === type || c.type === 'both'

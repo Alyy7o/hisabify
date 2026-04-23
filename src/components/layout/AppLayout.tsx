@@ -9,7 +9,8 @@ import {
   Menu,
   Plus,
   PieChart,
-  User
+  User,
+  HandCoins,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddTransactionDialog } from '@/components/transaction/AddTransactionDialog';
@@ -41,6 +42,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
   const menuItems = [
     { icon: LayoutDashboard, label: t('sidebar.dashboard'), path: '/' },
     { icon: PieChart, label: t('sidebar.analytics'), path: '/analytics' },
+    { icon: HandCoins, label: 'Settlements', path: '/settlements' },
     // { icon: ArrowRightLeft, label: t('sidebar.transactions'), path: '/transactions' },
     // { icon: Wallet, label: t('sidebar.wallets'), path: '/wallets' },
     { icon: SettingsIcon, label: t('sidebar.settings'), path: '/settings' },

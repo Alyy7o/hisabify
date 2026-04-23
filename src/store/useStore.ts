@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Wallet, Transaction, Category, Budget, Goal, DEFAULT_CATEGORIES } from '@/lib/types';
+import { Wallet, Transaction, Category, Budget, Goal, DEFAULT_CATEGORIES, Settlement, SettlementMovement } from '@/lib/types';
 import { toast } from 'sonner';
 
 interface AppState {
   wallets: Wallet[];
   transactions: Transaction[];
+  settlements: Settlement[];
   categories: Category[];
   budgets: Budget[];
   goals: Goal[];
@@ -13,6 +14,7 @@ interface AppState {
   // Bulk Setters (for Sync)
   setWallets: (wallets: Wallet[]) => void;
   setTransactions: (transactions: Transaction[]) => void;
+  setSettlements: (settlements: Settlement[]) => void;
   setCategories: (categories: Category[]) => void;
 
   // Wallet actions
@@ -24,6 +26,17 @@ interface AppState {
   addTransaction: (transaction: Transaction) => void;
   updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
+
+  // Settlement actions
+  addSettlement: (settlement: Settlement) => void;
+  updateSettlement: (id: string, settlement: Partial<Settlement>) => void;
+  deleteSettlement: (id: string) => void;
+  recordSettlementPayment: (settlementId: string, payload: {
+    amount: number;
+    walletId: string;
+    date: Date;
+    note?: string;
+  }) => void;
 
   // Category actions
   addCategory: (category: Category) => void;
@@ -52,6 +65,7 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       wallets: [],
       transactions: [],
+      settlements: [],
       categories: DEFAULT_CATEGORIES,
       budgets: [],
       goals: [],
@@ -59,6 +73,7 @@ export const useStore = create<AppState>()(
       // Bulk Setters
       setWallets: (wallets) => set({ wallets }),
       setTransactions: (transactions) => set({ transactions }),
+      setSettlements: (settlements) => set({ settlements }),
       setCategories: (categories) => set({ categories }),
 
       // Wallet actions
@@ -135,6 +150,91 @@ export const useStore = create<AppState>()(
           return { transactions: state.transactions.filter(t => t.id !== id) };
         });
         deleteTransactionFromSupabase(id);
+      },
+
+      // Settlement actions
+      addSettlement: (settlement) => {
+        set((state) => {
+          const normalizedSettlement = normalizeSettlement(settlement);
+          return {
+            settlements: [...state.settlements, normalizedSettlement],
+          };
+        });
+      },
+      updateSettlement: (id, updates) => {
+        set((state) => ({
+          settlements: state.settlements.map((settlement) => {
+            if (settlement.id !== id) {
+              return settlement;
+            }
+
+            return normalizeSettlement({
+              ...settlement,
+              ...updates,
+              movements: updates.movements ?? settlement.movements,
+              updatedAt: new Date(),
+            });
+          }),
+        }));
+      },
+      deleteSettlement: (id) => {
+        set((state) => ({
+          settlements: state.settlements.filter((settlement) => settlement.id !== id),
+        }));
+      },
+      recordSettlementPayment: (settlementId, payload) => {
+        const settlement = get().settlements.find((item) => item.id === settlementId);
+        if (!settlement) {
+          return;
+        }
+
+        const paymentAmount = payload.amount;
+        if (!Number.isFinite(paymentAmount) || paymentAmount <= 0 || paymentAmount > settlement.remainingAmount) {
+          return;
+        }
+
+        const movementDirection: SettlementMovement['direction'] = settlement.kind === 'given' ? 'inflow' : 'outflow';
+        const transactionType: Transaction['type'] = settlement.kind === 'given' ? 'income' : 'expense';
+        const movement: SettlementMovement = {
+          id: crypto.randomUUID(),
+          settlementId,
+          kind: 'payment',
+          direction: movementDirection,
+          amount: paymentAmount,
+          walletId: payload.walletId,
+          applyToWallet: true,
+          note: payload.note,
+          date: payload.date,
+        };
+
+        set((state) => ({
+          settlements: state.settlements.map((item) => {
+            if (item.id !== settlementId) {
+              return item;
+            }
+
+            return normalizeSettlement({
+              ...item,
+              movements: [...item.movements, movement],
+              updatedAt: new Date(),
+            });
+          }),
+        }));
+
+        get().addTransaction({
+          id: crypto.randomUUID(),
+          walletId: payload.walletId,
+          categoryId: 'transfer',
+          amount: paymentAmount,
+          type: transactionType,
+          reason: settlement.kind === 'given'
+            ? `Settlement received from ${settlement.personName}`
+            : `Settlement paid to ${settlement.personName}`,
+          notes: payload.note?.trim()
+            ? `${settlement.title}\n${payload.note.trim()}`
+            : settlement.title,
+          date: payload.date,
+        });
       },
 
       // Category actions
@@ -380,6 +480,21 @@ async function deleteTransactionFromSupabase(id: string) {
   if (session.data.session?.user) {
     await import('@/lib/supabase').then(m => m.supabase.from('transactions').delete().eq('id', id));
   }
+}
+
+function normalizeSettlement(settlement: Settlement): Settlement {
+  const paidAmount = settlement.movements
+    .filter((movement) => movement.kind === 'payment')
+    .reduce((sum, movement) => sum + movement.amount, 0);
+  const remainingAmount = Math.max(0, settlement.totalAmount - paidAmount);
+
+  return {
+    ...settlement,
+    paidAmount,
+    remainingAmount,
+    status: remainingAmount <= 0 ? 'completed' : 'active',
+    updatedAt: settlement.updatedAt ?? new Date(),
+  };
 }
 
 async function pushCategoryToSupabase(category: Category) {

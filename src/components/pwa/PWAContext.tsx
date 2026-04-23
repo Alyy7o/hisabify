@@ -5,6 +5,7 @@ interface PWAContextType {
     isInstalled: boolean;
     installApp: () => Promise<boolean>;
     isInstallable: boolean;
+    isIos: boolean;
 }
 
 const PWAContext = createContext<PWAContextType | undefined>(undefined);
@@ -12,6 +13,8 @@ const PWAContext = createContext<PWAContextType | undefined>(undefined);
 export function PWAProvider({ children }: { children: ReactNode }) {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isInstalled, setIsInstalled] = useState(false);
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
+        (window.navigator.userAgent.includes('Mac') && 'ontouchend' in document);
 
     useEffect(() => {
         // Check if app is already installed
@@ -50,6 +53,7 @@ export function PWAProvider({ children }: { children: ReactNode }) {
         isInstalled,
         installApp,
         isInstallable: !!deferredPrompt && !isInstalled,
+        isIos,
     };
 
     return (
