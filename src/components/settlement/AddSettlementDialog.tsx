@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { Settlement, SettlementKind } from '@/lib/types';
+import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { HandCoins, ArrowDownLeft } from 'lucide-react';
 
 interface AddSettlementDialogProps {
@@ -92,15 +93,15 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HandCoins className="w-5 h-5 text-primary" />
             {initialSettlement ? 'Edit Settlement' : 'New Settlement'}
           </DialogTitle>
-          <DialogDescription>
+          {/* <DialogDescription>
             Save a future money settlement. Wallet balance changes only when you record payment.
-          </DialogDescription>
+          </DialogDescription> */}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -118,7 +119,7 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
                 )}
               >
                 <ArrowDownLeft className="w-4 h-4" />
-                I gave money
+                Give money
               </button>
               <button
                 type="button"
@@ -131,7 +132,7 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
                 )}
               >
                 <HandCoins className="w-4 h-4" />
-                I received money
+                Receive money
               </button>
             </div>
           </div>
@@ -174,23 +175,12 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
 
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              required
-            />
+            <DatePickerInput id="date" value={date} onChange={setDate} />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="dueDate">Due Date (optional)</Label>
-            <Input
-              id="dueDate"
-              type="date"
-              value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
-            />
+            <DatePickerInput id="dueDate" value={dueDate} onChange={setDueDate} placeholder="Pick due date" />
           </div>
 
           <div className="space-y-2">

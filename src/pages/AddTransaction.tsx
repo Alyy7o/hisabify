@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useStore } from '@/store/useStore';
+import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -188,14 +189,7 @@ export default function AddTransaction() {
           {/* Date */}
           <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
             <Label htmlFor="date" className="text-foreground">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="h-12"
-              required
-            />
+            <DatePickerInput id="date" value={date} onChange={setDate} className="h-12" />
           </div>
 
           {/* Description */}

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { Category } from '@/lib/types';
@@ -209,13 +210,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
             </div>
             <div className="space-y-2 col-span-1">
               <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
+              <DatePickerInput id="date" value={date} onChange={setDate} />
             </div>
           </div>
 

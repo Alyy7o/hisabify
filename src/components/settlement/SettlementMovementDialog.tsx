@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useStore } from '@/store/useStore';
 import { Settlement } from '@/lib/types';
 import { IconDisplay } from '@/components/common/IconDisplay';
+import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { HandCoins, ArrowDownLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -98,7 +99,7 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HandCoins className="w-5 h-5 text-primary" />
@@ -202,13 +203,7 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
 
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              required
-            />
+            <DatePickerInput id="date" value={date} onChange={setDate} />
           </div>
 
           <div className="space-y-2">
