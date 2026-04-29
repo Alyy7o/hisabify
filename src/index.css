@@ -97,11 +97,11 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground overflow-x-hidden;
+  html, body, #root {
+    @apply max-w-[100vw] overflow-x-hidden;
   }
-  
-  html {
-    @apply overflow-x-hidden;
+
+  body {
+    @apply bg-background text-foreground;
   }
 }
