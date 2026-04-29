@@ -160,6 +160,8 @@ export const useStore = create<AppState>()(
             settlements: [...state.settlements, normalizedSettlement],
           };
         });
+        const newSettlement = normalizeSettlement(settlement);
+        pushSettlementToSupabase(newSettlement);
       },
       updateSettlement: (id, updates) => {
         set((state) => ({
@@ -176,11 +178,14 @@ export const useStore = create<AppState>()(
             });
           }),
         }));
+        const updatedSettlement = get().settlements.find(s => s.id === id);
+        if (updatedSettlement) pushSettlementToSupabase(updatedSettlement);
       },
       deleteSettlement: (id) => {
         set((state) => ({
           settlements: state.settlements.filter((settlement) => settlement.id !== id),
         }));
+        deleteSettlementFromSupabase(id);
       },
       recordSettlementPayment: (settlementId, payload) => {
         const settlement = get().settlements.find((item) => item.id === settlementId);
@@ -220,6 +225,9 @@ export const useStore = create<AppState>()(
             });
           }),
         }));
+        
+        const updatedSettlement = get().settlements.find(s => s.id === settlementId);
+        if (updatedSettlement) pushSettlementToSupabase(updatedSettlement);
 
         get().addTransaction({
           id: crypto.randomUUID(),
@@ -532,5 +540,54 @@ async function deleteCategoryFromSupabase(id: string) {
   const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
   if (session.data.session?.user) {
     await import('@/lib/supabase').then(m => m.supabase.from('categories').delete().eq('id', `${session.data.session!.user.id}_${id}`));
+  }
+}
+
+async function pushSettlementToSupabase(settlement: Settlement) {
+  try {
+    const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
+    if (session.data.session?.user) {
+      console.log('Pushing settlement to Supabase:', settlement.title);
+      
+      const payload = {
+        id: settlement.id,
+        user_id: session.data.session!.user.id,
+        person_name: settlement.personName,
+        title: settlement.title,
+        kind: settlement.kind,
+        total_amount: settlement.totalAmount,
+        paid_amount: settlement.paidAmount,
+        remaining_amount: settlement.remainingAmount,
+        status: settlement.status,
+        due_date: settlement.dueDate ? new Date(settlement.dueDate).toISOString() : null,
+        wallet_id: settlement.walletId,
+        notes: settlement.notes,
+        split_total_amount: settlement.splitTotalAmount,
+        split_people_count: settlement.splitPeopleCount,
+        your_share: settlement.yourShare,
+        movements: settlement.movements,
+        created_at: settlement.createdAt ? new Date(settlement.createdAt).toISOString() : new Date().toISOString(),
+        updated_at: settlement.updatedAt ? new Date(settlement.updatedAt).toISOString() : new Date().toISOString()
+      };
+
+      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('settlements').upsert(payload));
+
+      if (error) {
+        console.error('Error syncing settlement:', error);
+        toast.error(`Failed to save settlement: ${error.message}`);
+      } else {
+        console.log('Settlement synced successfully');
+      }
+    }
+  } catch (err) {
+    console.error('Exception in pushSettlementToSupabase:', err);
+    toast.error('Failed to sync settlement. Please check your connection.');
+  }
+}
+
+async function deleteSettlementFromSupabase(id: string) {
+  const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
+  if (session.data.session?.user) {
+    await import('@/lib/supabase').then(m => m.supabase.from('settlements').delete().eq('id', id));
   }
 }

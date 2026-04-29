@@ -3,6 +3,7 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { Settlement } from '@/lib/types';
 
 let isSyncing = false;
 let lastSyncedUserId: string | null = null;
@@ -13,9 +14,11 @@ export function useDataSync() {
         wallets,
         transactions,
         categories,
+        settlements,
         setWallets,
         setTransactions,
-        setCategories
+        setCategories,
+        setSettlements
     } = useStore();
 
     useEffect(() => {
@@ -48,6 +51,13 @@ export function useDataSync() {
 
                 if (categoriesError) throw categoriesError;
 
+                const { data: dbSettlements, error: settlementsError } = await supabase
+                    .from('settlements')
+                    .select('*')
+                    .eq('user_id', user.id);
+
+                if (settlementsError) throw settlementsError;
+
                 // 2. Check for local data that needs to be synced (Guest -> Login transition)
                 // We assume any wallet/transaction in local store that is NOT in DB needs to be uploaded
                 // HOWEVER, strictly speaking, we should only upload if it was created locally.
@@ -68,14 +78,17 @@ export function useDataSync() {
                 let walletUploadFailed = false;
                 let transactionUploadFailed = false;
                 let categoryUploadFailed = false;
+                let settlementUploadFailed = false;
                 let walletSyncError: any = null;
                 let transactionSyncError: any = null;
                 let categorySyncError: any = null;
+                let settlementSyncError: any = null;
 
                 // Simple check: If local has data but DB result is empty (or smaller), implies we might have guest data
                 const localWalletsToUpload = wallets.filter(w => !dbWallets?.find(dw => dw.id === w.id));
                 const localCategoriesToUpload = categories.filter(c => !dbCategories?.find(dc => dc.id === c.id));
                 const localTransactionsToUpload = transactions.filter(t => !dbTransactions?.find(dt => dt.id === t.id));
+                const localSettlementsToUpload = settlements.filter(s => !dbSettlements?.find(ds => ds.id === s.id));
 
                 if (localWalletsToUpload.length > 0) {
                     const walletsPayload = localWalletsToUpload.map(w => ({
@@ -119,6 +132,39 @@ export function useDataSync() {
                     } else {
                         hasChanges = true;
                         toast.success(`Synced ${localCategoriesToUpload.length} categories to cloud`);
+                    }
+                }
+
+                if (localSettlementsToUpload.length > 0) {
+                    const settlementsPayload = localSettlementsToUpload.map(s => ({
+                        id: s.id,
+                        user_id: user.id,
+                        person_name: s.personName,
+                        title: s.title,
+                        kind: s.kind,
+                        total_amount: s.totalAmount,
+                        paid_amount: s.paidAmount,
+                        remaining_amount: s.remainingAmount,
+                        status: s.status,
+                        due_date: s.dueDate ? new Date(s.dueDate).toISOString() : null,
+                        wallet_id: s.walletId,
+                        notes: s.notes,
+                        split_total_amount: s.splitTotalAmount,
+                        split_people_count: s.splitPeopleCount,
+                        your_share: s.yourShare,
+                        movements: s.movements,
+                        created_at: s.createdAt ? new Date(s.createdAt).toISOString() : new Date().toISOString(),
+                        updated_at: s.updatedAt ? new Date(s.updatedAt).toISOString() : new Date().toISOString()
+                    }));
+
+                    const { error: uploadError } = await supabase.from('settlements').upsert(settlementsPayload);
+                    if (uploadError) {
+                        console.error('Error syncing settlements:', uploadError);
+                        settlementUploadFailed = true;
+                        settlementSyncError = uploadError;
+                    } else {
+                        hasChanges = true;
+                        toast.success(`Synced ${localSettlementsToUpload.length} settlements to cloud`);
                     }
                 }
 
@@ -198,11 +244,12 @@ export function useDataSync() {
                 // Ensure we don't proceed to update store if critical syncs failed, but we might want partial updates?
                 // Actually, we should probably update what we can.
 
-                if (hasChanges && !walletUploadFailed && !transactionUploadFailed && !categoryUploadFailed) {
+                if (hasChanges && !walletUploadFailed && !transactionUploadFailed && !categoryUploadFailed && !settlementUploadFailed) {
                     // Perfect sync, fetch authoritative state
                     const { data: finalWallets } = await supabase.from('wallets').select('*').eq('user_id', user.id);
                     const { data: finalCategories } = await supabase.from('categories').select('*').eq('user_id', user.id);
                     const { data: finalTransactions } = await supabase.from('transactions').select('*').eq('user_id', user.id);
+                    const { data: finalSettlements } = await supabase.from('settlements').select('*').eq('user_id', user.id);
 
                     if (finalWallets) {
                         const mappedWallets = finalWallets.map((w: any) => ({
@@ -227,6 +274,28 @@ export function useDataSync() {
                         }));
                         setCategories(mappedCategories as any);
                     }
+                    if (finalSettlements) {
+                        const mappedSettlements: Settlement[] = finalSettlements.map((s: any) => ({
+                            id: s.id,
+                            personName: s.person_name,
+                            title: s.title,
+                            kind: s.kind,
+                            totalAmount: Number(s.total_amount),
+                            paidAmount: Number(s.paid_amount),
+                            remainingAmount: Number(s.remaining_amount),
+                            status: s.status,
+                            dueDate: s.due_date ? new Date(s.due_date) : undefined,
+                            walletId: s.wallet_id,
+                            notes: s.notes,
+                            splitTotalAmount: s.split_total_amount ? Number(s.split_total_amount) : undefined,
+                            splitPeopleCount: s.split_people_count ? Number(s.split_people_count) : undefined,
+                            yourShare: s.your_share ? Number(s.your_share) : undefined,
+                            movements: s.movements || [],
+                            createdAt: new Date(s.created_at),
+                            updatedAt: new Date(s.updated_at),
+                        }));
+                        setSettlements(mappedSettlements);
+                    }
                 } else {
                     // Partial sync or No sync needed.
                     // If upload failed, we MUST MERGE db data with local data to avoid losing local changes.
@@ -247,6 +316,26 @@ export function useDataSync() {
                     let mergedCategories = (dbCategories || []).map((c: any) => ({
                         ...c,
                         id: c.id.replace(`${user.id}_`, '')
+                    }));
+
+                    let mergedSettlements: Settlement[] = (dbSettlements || []).map((s: any) => ({
+                        id: s.id,
+                        personName: s.person_name,
+                        title: s.title,
+                        kind: s.kind,
+                        totalAmount: Number(s.total_amount),
+                        paidAmount: Number(s.paid_amount),
+                        remainingAmount: Number(s.remaining_amount),
+                        status: s.status,
+                        dueDate: s.due_date ? new Date(s.due_date) : undefined,
+                        walletId: s.wallet_id,
+                        notes: s.notes,
+                        splitTotalAmount: s.split_total_amount ? Number(s.split_total_amount) : undefined,
+                        splitPeopleCount: s.split_people_count ? Number(s.split_people_count) : undefined,
+                        yourShare: s.your_share ? Number(s.your_share) : undefined,
+                        movements: s.movements || [],
+                        createdAt: new Date(s.created_at),
+                        updatedAt: new Date(s.updated_at),
                     }));
 
                     if (walletUploadFailed) {
@@ -294,9 +383,16 @@ export function useDataSync() {
                         toast.error(`Failed to sync transactions: ${transactionSyncError?.message || 'Unknown error'}`);
                     }
 
+                    if (settlementUploadFailed) {
+                        const missingSettlements = localSettlementsToUpload.filter(ls => !mergedSettlements.find(ms => ms.id === ls.id));
+                        mergedSettlements = [...mergedSettlements, ...missingSettlements];
+                        toast.error(`Failed to sync settlements: ${settlementSyncError?.message || 'Unknown error'}`);
+                    }
+
                     setWallets(mergedWallets);
                     setCategories(mergedCategories);
                     setTransactions(mergedTransactions);
+                    setSettlements(mergedSettlements);
                 }
 
             } catch (error: any) {
@@ -323,7 +419,7 @@ export function useDataSync() {
         };
 
         syncData();
-    }, [user, setWallets, setTransactions, setCategories]);
+    }, [user, setWallets, setTransactions, setCategories, setSettlements]);
 
     return null;
 }

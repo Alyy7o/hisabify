@@ -11,6 +11,7 @@ import {
   PieChart,
   User,
   HandCoins,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddTransactionDialog } from '@/components/transaction/AddTransactionDialog';
@@ -131,7 +132,16 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
         <header className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
           <div className="flex items-center justify-between h-14 px-4">
             {title && <h1 className="text-lg font-semibold text-foreground">{title}</h1>}
-            <LanguageToggle />
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => window.location.reload()} 
+                className="p-2 text-muted-foreground hover:bg-secondary rounded-full"
+                aria-label="Reload page"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+              <LanguageToggle />
+            </div>
           </div>
         </header>
 
