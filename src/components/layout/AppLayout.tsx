@@ -55,7 +55,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
   };
 
   return (
-    <div className="min-h-screen bg-background flex w-full">
+    <div className="min-h-screen bg-background flex w-full overflow-x-hidden">
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex w-64 flex-col border-r bg-card/50 backdrop-blur-xl h-screen sticky top-0">
         <div className="p-6 border-b flex items-center gap-2">

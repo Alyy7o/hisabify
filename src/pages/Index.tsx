@@ -86,7 +86,7 @@ export default function Index() {
               <div className="relative inline-flex min-h-9 items-center">
                 <p
                   className={cn(
-                    "text-3xl font-bold tracking-tight transition-all duration-200 ease-in-out",
+                    "text-2xl sm:text-3xl font-bold tracking-tight transition-all duration-200 ease-in-out truncate max-w-full",
                     showBalance ? "opacity-100 translate-y-0 scale-100" : "pointer-events-none absolute opacity-0 -translate-y-1 scale-95"
                   )}
                 >
@@ -94,7 +94,7 @@ export default function Index() {
                 </p>
                 <p
                   className={cn(
-                    "text-3xl font-bold tracking-tight transition-all duration-200 ease-in-out",
+                    "text-2xl sm:text-3xl font-bold tracking-tight transition-all duration-200 ease-in-out",
                     showBalance ? "pointer-events-none absolute opacity-0 translate-y-1 scale-95" : "opacity-100 translate-y-0 scale-100"
                   )}
                 >
@@ -110,23 +110,23 @@ export default function Index() {
                 {showBalance ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
-            <div className="flex gap-4 pt-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center shrink-0">
                   <TrendingUp className="w-4 h-4" />
                 </div>
-                <div>
-                  <p className="text-xs text-primary-foreground/70">{t('dashboard.income')}</p>
-                  <p className="text-sm font-semibold">{formatCurrency(monthlyIncome)}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-primary-foreground/70 truncate">{t('dashboard.income')}</p>
+                  <p className="text-sm font-semibold truncate">{formatCurrency(monthlyIncome)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center shrink-0">
                   <TrendingDown className="w-4 h-4" />
                 </div>
-                <div>
-                  <p className="text-xs text-primary-foreground/70">{t('dashboard.expense')}</p>
-                  <p className="text-sm font-semibold">{formatCurrency(monthlyExpenses)}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-primary-foreground/70 truncate">{t('dashboard.expense')}</p>
+                  <p className="text-sm font-semibold truncate">{formatCurrency(monthlyExpenses)}</p>
                 </div>
               </div>
             </div>
