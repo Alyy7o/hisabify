@@ -270,7 +270,7 @@ export default function Analytics() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-3 animate-fade-in">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fade-in">
           <Card className="p-3 text-center">
             <TrendingUp className="w-5 h-5 mx-auto mb-1 text-success" />
             <p className="text-xs text-muted-foreground">{t('common.income')}</p>
@@ -330,7 +330,7 @@ export default function Analytics() {
         {categoryData.length > 0 && (
           <Card className="p-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
             <h3 className="font-semibold text-foreground mb-4">Spending by Category</h3>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
               <div className="w-32 h-32 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -348,9 +348,9 @@ export default function Analytics() {
                       ))}
                     </Pie>
                   </PieChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
               </div>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 w-full space-y-2">
                 {categoryData.slice(0, 4).map((category) => (
                   <div key={category.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

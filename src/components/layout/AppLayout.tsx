@@ -55,7 +55,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
   };
 
   return (
-    <div className="min-h-screen bg-background flex w-full overflow-x-hidden">
+    <div className="min-h-screen bg-background flex w-full">
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex w-64 flex-col border-r bg-card/50 backdrop-blur-xl h-screen sticky top-0">
         <div className="p-6 border-b flex items-center gap-2">
@@ -120,7 +120,6 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen relative">
-        {/* ... (keep existing headers and content) ... */}
         {/* Desktop Header for Language Toggle */}
         <header className="hidden md:flex justify-end p-4 absolute top-0 right-0 z-50 pointer-events-none">
           <div className="pointer-events-auto">

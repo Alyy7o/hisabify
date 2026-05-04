@@ -98,7 +98,7 @@ All colors MUST be HSL.
   }
 
   html, body, #root {
-    @apply max-w-[100vw] overflow-x-hidden;
+    @apply min-h-screen w-full;
   }
 
   body {

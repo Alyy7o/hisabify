@@ -134,7 +134,7 @@ export default function Index() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
           <button
             type="button"
             className="h-auto py-5 px-4 rounded-xl border border-border bg-card hover:bg-success/10 hover:border-success/50 transition-all flex flex-col items-center gap-2"

@@ -55,7 +55,7 @@ export default function Wallets() {
         </Card>
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Button
             onClick={() => setShowAddWallet(true)}
             className="w-full gap-2"

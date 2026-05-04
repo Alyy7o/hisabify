@@ -328,7 +328,7 @@ export default function Settings() {
 
           {/* Stats */}
           <Card className="p-4 animate-fade-in" style={{ animationDelay: '50ms' }}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-primary">{wallets.length}</p>
                 <p className="text-xs text-muted-foreground">Wallets</p>

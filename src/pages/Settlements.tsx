@@ -101,7 +101,7 @@ export default function Settlements() {
               Add
             </Button>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl bg-primary-foreground/10 p-3">
               <p className="text-primary-foreground/70">They owe you</p>
               <p className="font-semibold">Rs {totalGiven.toLocaleString()}</p>
