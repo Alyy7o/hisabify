@@ -90,10 +90,12 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
     try {
       await recordSettlementPaymentMutation.mutateAsync({
         settlementId: settlement.id,
-        amount: paymentAmount,
-        walletId,
-        note: note.trim() || undefined,
-        date: new Date(date),
+        payload: {
+          amount: paymentAmount,
+          walletId,
+          note: note.trim() || undefined,
+          date: new Date(date),
+        }
       });
 
       toast.success('Settlement updated and transaction added');
