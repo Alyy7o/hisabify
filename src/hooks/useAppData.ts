@@ -32,11 +32,20 @@ function mapDbTransactionToClient(t: any, userId: string): Transaction {
   let categoryId = rawCategoryId;
   let toWalletId;
   let type: 'income' | 'expense' | 'transfer' = t.type;
+  let notes = t.notes || '';
   
+  // Backwards compatibility check: If we previously stored it in category_id (though it failed remotely, it might be in local state)
   if (rawCategoryId.startsWith('transfer_')) {
     categoryId = 'transfer';
     toWalletId = rawCategoryId.replace('transfer_', '');
     type = 'transfer';
+  } else if (categoryId === 'transfer' && notes.includes('[DEST:')) {
+    type = 'transfer';
+    const destMatch = notes.match(/\[DEST:([a-zA-Z0-9-]+)\]/);
+    if (destMatch) {
+      toWalletId = destMatch[1];
+      notes = notes.replace(destMatch[0], '').trim();
+    }
   }
 
   return {
@@ -45,14 +54,18 @@ function mapDbTransactionToClient(t: any, userId: string): Transaction {
     categoryId,
     toWalletId,
     type,
+    notes,
     date: new Date(t.date),
   };
 }
 
 function mapClientTransactionToDb(t: Transaction, userId: string): any {
   let dbCategoryId = `${userId}_${t.categoryId}`;
+  
+  let notes = t.notes;
   if (t.type === 'transfer' && t.toWalletId) {
-     dbCategoryId = `${userId}_transfer_${t.toWalletId}`;
+     dbCategoryId = `${userId}_transfer`;
+     notes = notes ? `${notes}\n\n[DEST:${t.toWalletId}]` : `[DEST:${t.toWalletId}]`;
   }
 
   return {
@@ -64,7 +77,7 @@ function mapClientTransactionToDb(t: Transaction, userId: string): any {
     category_id: dbCategoryId,
     reason: t.reason,
     date: t.date instanceof Date ? t.date.toISOString() : new Date(t.date).toISOString(),
-    notes: t.notes
+    notes: notes
   };
 }
 
