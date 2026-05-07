@@ -111,21 +111,27 @@ export const useStore = create<AppState>()(
       // Transaction actions
       addTransaction: (transaction) => {
         set((state) => {
-          const wallet = state.wallets.find(w => w.id === transaction.walletId);
-          if (wallet) {
-            const newBalance = transaction.type === 'income'
-              ? wallet.balance + transaction.amount
-              : wallet.balance - transaction.amount;
-            return {
-              transactions: [...state.transactions, transaction],
-              wallets: state.wallets.map(w =>
-                w.id === transaction.walletId
-                  ? { ...w, balance: newBalance }
-                  : w
-              ),
-            };
+          const newWallets = [...state.wallets];
+          
+          const sourceIdx = newWallets.findIndex(w => w.id === transaction.walletId);
+          if (sourceIdx !== -1) {
+            const w = newWallets[sourceIdx];
+            let newBalance = w.balance;
+            if (transaction.type === 'income') newBalance += transaction.amount;
+            else if (transaction.type === 'expense') newBalance -= transaction.amount;
+            else if (transaction.type === 'transfer') newBalance -= transaction.amount;
+            newWallets[sourceIdx] = { ...w, balance: newBalance };
           }
-          return { transactions: [...state.transactions, transaction] };
+
+          if (transaction.type === 'transfer' && transaction.toWalletId) {
+            const destIdx = newWallets.findIndex(w => w.id === transaction.toWalletId);
+            if (destIdx !== -1) {
+              const w = newWallets[destIdx];
+              newWallets[destIdx] = { ...w, balance: w.balance + transaction.amount };
+            }
+          }
+
+          return { transactions: [...state.transactions, transaction], wallets: newWallets };
         });
       },
       updateTransaction: (id, updates) => {
@@ -139,20 +145,30 @@ export const useStore = create<AppState>()(
         set((state) => {
           const transaction = state.transactions.find(t => t.id === id);
           if (transaction) {
-            const wallet = state.wallets.find(w => w.id === transaction.walletId);
-            if (wallet) {
-              const adjustment = transaction.type === 'income'
-                ? -transaction.amount
-                : transaction.amount;
-              return {
-                transactions: state.transactions.filter(t => t.id !== id),
-                wallets: state.wallets.map(w =>
-                  w.id === transaction.walletId
-                    ? { ...w, balance: w.balance + adjustment }
-                    : w
-                ),
-              };
+            const newWallets = [...state.wallets];
+            
+            const sourceIdx = newWallets.findIndex(w => w.id === transaction.walletId);
+            if (sourceIdx !== -1) {
+              const w = newWallets[sourceIdx];
+              let newBalance = w.balance;
+              if (transaction.type === 'income') newBalance -= transaction.amount;
+              else if (transaction.type === 'expense') newBalance += transaction.amount;
+              else if (transaction.type === 'transfer') newBalance += transaction.amount;
+              newWallets[sourceIdx] = { ...w, balance: newBalance };
             }
+
+            if (transaction.type === 'transfer' && transaction.toWalletId) {
+              const destIdx = newWallets.findIndex(w => w.id === transaction.toWalletId);
+              if (destIdx !== -1) {
+                const w = newWallets[destIdx];
+                newWallets[destIdx] = { ...w, balance: w.balance - transaction.amount };
+              }
+            }
+
+            return {
+              transactions: state.transactions.filter(t => t.id !== id),
+              wallets: newWallets,
+            };
           }
           return { transactions: state.transactions.filter(t => t.id !== id) };
         });

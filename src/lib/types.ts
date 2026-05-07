@@ -13,8 +13,9 @@ export interface Transaction {
   id: string;
   walletId: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   categoryId: string;
+  toWalletId?: string; // Used when type is 'transfer'
   reason: string;
   date: Date;
   notes?: string;

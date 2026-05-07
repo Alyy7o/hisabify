@@ -15,7 +15,8 @@ import {
     PiggyBank,
     Coins,
     HelpCircle,
-    Heart
+    Heart,
+    ArrowRightLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ export const iconMap: Record<string, any> = {
     'Laptop': Laptop,
     'TrendingUp': TrendingUp,
     'Box': Box,
+    'ArrowRightLeft': ArrowRightLeft,
 
     // Legacy Emoji Support
     '🍔': Utensils,

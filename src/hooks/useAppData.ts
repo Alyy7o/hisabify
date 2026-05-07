@@ -28,22 +28,40 @@ function mapClientWalletToDb(w: Wallet, userId: string): any {
 }
 
 function mapDbTransactionToClient(t: any, userId: string): Transaction {
+  const rawCategoryId = t.category_id.replace(`${userId}_`, '');
+  let categoryId = rawCategoryId;
+  let toWalletId;
+  let type: 'income' | 'expense' | 'transfer' = t.type;
+  
+  if (rawCategoryId.startsWith('transfer_')) {
+    categoryId = 'transfer';
+    toWalletId = rawCategoryId.replace('transfer_', '');
+    type = 'transfer';
+  }
+
   return {
     ...t,
     walletId: t.wallet_id,
-    categoryId: t.category_id.replace(`${userId}_`, ''),
+    categoryId,
+    toWalletId,
+    type,
     date: new Date(t.date),
   };
 }
 
 function mapClientTransactionToDb(t: Transaction, userId: string): any {
+  let dbCategoryId = `${userId}_${t.categoryId}`;
+  if (t.type === 'transfer' && t.toWalletId) {
+     dbCategoryId = `${userId}_transfer_${t.toWalletId}`;
+  }
+
   return {
     id: t.id,
     user_id: userId,
     wallet_id: t.walletId,
     amount: t.amount,
-    type: t.type,
-    category_id: `${userId}_${t.categoryId}`,
+    type: t.type === 'transfer' ? 'expense' : t.type,
+    category_id: dbCategoryId,
     reason: t.reason,
     date: t.date instanceof Date ? t.date.toISOString() : new Date(t.date).toISOString(),
     notes: t.notes
@@ -299,9 +317,10 @@ export function useCreateTransaction() {
         
       if (walletQueryError) throw walletQueryError;
       
-      const newBalance = transaction.type === 'income' 
-        ? walletData.balance + transaction.amount 
-        : walletData.balance - transaction.amount;
+      let newBalance = walletData.balance;
+      if (transaction.type === 'income') newBalance += transaction.amount;
+      else if (transaction.type === 'expense') newBalance -= transaction.amount;
+      else if (transaction.type === 'transfer') newBalance -= transaction.amount;
         
       const { error: walletUpdateError } = await supabase
         .from('wallets')
@@ -310,6 +329,24 @@ export function useCreateTransaction() {
         .eq('user_id', user.id);
         
       if (walletUpdateError) throw walletUpdateError;
+
+      // If transfer, also update destination wallet
+      if (transaction.type === 'transfer' && transaction.toWalletId) {
+        const { data: destWalletData, error: destWalletQueryError } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('id', transaction.toWalletId)
+          .eq('user_id', user.id)
+          .single();
+          
+        if (!destWalletQueryError && destWalletData) {
+           await supabase
+            .from('wallets')
+            .update({ balance: destWalletData.balance + transaction.amount })
+            .eq('id', transaction.toWalletId)
+            .eq('user_id', user.id);
+        }
+      }
 
       const payload = mapClientTransactionToDb(transaction, user.id);
       const { error } = await supabase.from('transactions').insert(payload);
@@ -339,8 +376,16 @@ export function useUpdateTransaction() {
       const payload: any = {};
       if (updates.walletId !== undefined) payload.wallet_id = updates.walletId;
       if (updates.amount !== undefined) payload.amount = updates.amount;
-      if (updates.type !== undefined) payload.type = updates.type;
-      if (updates.categoryId !== undefined) payload.category_id = `${user.id}_${updates.categoryId}`;
+      if (updates.type !== undefined) payload.type = updates.type === 'transfer' ? 'expense' : updates.type;
+      
+      let dbCategoryId = payload.category_id;
+      if (updates.categoryId !== undefined) {
+        dbCategoryId = `${user.id}_${updates.categoryId}`;
+      }
+      if (updates.type === 'transfer' && updates.toWalletId) {
+        dbCategoryId = `${user.id}_transfer_${updates.toWalletId}`;
+      }
+      if (dbCategoryId) payload.category_id = dbCategoryId;
       if (updates.reason !== undefined) payload.reason = updates.reason;
       if (updates.date !== undefined) payload.date = updates.date instanceof Date ? updates.date.toISOString() : new Date(updates.date).toISOString();
       if (updates.notes !== undefined) payload.notes = updates.notes;
@@ -367,7 +412,7 @@ export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, walletId, amount, type }: { id: string, walletId: string, amount: number, type: 'income' | 'expense' }) => {
+    mutationFn: async ({ id, walletId, amount, type, toWalletId }: { id: string, walletId: string, amount: number, type: 'income' | 'expense' | 'transfer', toWalletId?: string }) => {
       if (!user) {
         deleteGuestTransaction(id);
         return;
@@ -382,12 +427,33 @@ export function useDeleteTransaction() {
         .single();
         
       if (!walletQueryError && walletData) {
-        const adjustment = type === 'income' ? -amount : amount;
+        let adjustment = 0;
+        if (type === 'income') adjustment = -amount;
+        else if (type === 'expense') adjustment = amount;
+        else if (type === 'transfer') adjustment = amount; // refund the source wallet
+
         await supabase
           .from('wallets')
           .update({ balance: walletData.balance + adjustment })
           .eq('id', walletId)
           .eq('user_id', user.id);
+      }
+
+      // If transfer, ALSO refund the destination wallet
+      if (type === 'transfer' && toWalletId) {
+        const { data: destWalletData } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('id', toWalletId)
+          .eq('user_id', user.id)
+          .single();
+        if (destWalletData) {
+           await supabase
+            .from('wallets')
+            .update({ balance: destWalletData.balance - amount })
+            .eq('id', toWalletId)
+            .eq('user_id', user.id);
+        }
       }
 
       const { error } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', user.id);

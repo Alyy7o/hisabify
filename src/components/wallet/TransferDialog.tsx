@@ -59,41 +59,18 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
       return;
     }
 
-    const transferAmount = parseFloat(amount);
-    const transferId = crypto.randomUUID(); // Unique ID to logically link them if needed later
-    
-    // Construct notes to indicate it's a transfer
-    const sourceWalletName = sourceWallet?.name || 'Unknown Wallet';
-    const destWalletName = wallets.find(w => w.id === destinationWalletId)?.name || 'Unknown Wallet';
-    
-    const baseNotes = notes.trim();
-    const formattedNotes = baseNotes 
-        ? `${baseNotes}\n\n[Transfer: ${sourceWalletName} -> ${destWalletName}]`
-        : `[Transfer: ${sourceWalletName} -> ${destWalletName}]`;
-
     try {
       setIsSubmitting(true);
-      // 1. Create Expense transaction for Source Wallet
+      // 1. Create a single Transfer transaction
       await createTransactionMutation.mutateAsync({
         id: crypto.randomUUID(),
         walletId: sourceWalletId,
-        categoryId: 'transfer', // Using the new transfer category
+        toWalletId: destinationWalletId,
+        categoryId: 'transfer',
         amount: transferAmount,
-        type: 'expense',
-        reason: reason.trim(), // User requested same description for both
-        notes: formattedNotes,
-        date: new Date(date),
-      });
-
-      // 2. Create Income transaction for Destination Wallet
-      await createTransactionMutation.mutateAsync({
-        id: crypto.randomUUID(),
-        walletId: destinationWalletId,
-        categoryId: 'transfer', // Using the new transfer category
-        amount: transferAmount,
-        type: 'income',
-        reason: reason.trim(), // User requested same description for both
-        notes: formattedNotes,
+        type: 'transfer',
+        reason: reason.trim(),
+        notes: notes.trim(),
         date: new Date(date),
       });
 

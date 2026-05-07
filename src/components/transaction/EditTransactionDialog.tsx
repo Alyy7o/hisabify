@@ -23,7 +23,7 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
     const { data: categories = [] } = useCategories();
     const updateTransactionMutation = useUpdateTransaction();
     const createCategoryMutation = useCreateCategory();
-    const [type, setType] = useState<'income' | 'expense'>('expense');
+    const [type, setType] = useState<'income' | 'expense' | 'transfer'>('expense');
     const [walletId, setWalletId] = useState('');
     const [categoryId, setCategoryId] = useState('');
     const [customCategoryName, setCustomCategoryName] = useState('');
@@ -118,36 +118,42 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Type Toggle */}
-                    <div className="flex bg-secondary rounded-lg p-1">
-                        <button
-                            type="button"
-                            onClick={() => setType('expense')}
-                            className={cn(
-                                "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
-                                type === 'expense'
-                                    ? "bg-destructive text-destructive-foreground"
-                                    : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            Expense
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setType('income')}
-                            className={cn(
-                                "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
-                                type === 'income'
-                                    ? "bg-success text-success-foreground"
-                                    : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            Income
-                        </button>
-                    </div>
+                    {type === 'transfer' ? (
+                        <div className="bg-primary/10 text-primary px-3 py-2 rounded-md text-sm mb-4 border border-primary/20">
+                            <strong>Note:</strong> Wallet and category cannot be changed for transfers. Delete and recreate if needed.
+                        </div>
+                    ) : (
+                        <div className="flex bg-secondary rounded-lg p-1">
+                            <button
+                                type="button"
+                                onClick={() => setType('expense')}
+                                className={cn(
+                                    "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
+                                    type === 'expense'
+                                        ? "bg-destructive text-destructive-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Expense
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setType('income')}
+                                className={cn(
+                                    "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
+                                    type === 'income'
+                                        ? "bg-success text-success-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Income
+                            </button>
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <Label htmlFor="edit-wallet">Wallet</Label>
-                        <Select value={walletId} onValueChange={setWalletId} required>
+                        <Select value={walletId} onValueChange={setWalletId} required disabled={type === 'transfer'}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select wallet" />
                             </SelectTrigger>
@@ -171,7 +177,7 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
 
                     <div className="space-y-2">
                         <Label htmlFor="edit-category">Category</Label>
-                        <Select value={categoryId} onValueChange={setCategoryId} required>
+                        <Select value={categoryId} onValueChange={setCategoryId} required disabled={type === 'transfer'}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select category" />
                             </SelectTrigger>
@@ -248,10 +254,11 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
                         type="submit"
                         className={cn(
                             "w-full",
-                            type === 'income' && "bg-success hover:bg-success/90"
+                            type === 'income' && "bg-success hover:bg-success/90",
+                            type === 'transfer' && "bg-primary hover:bg-primary/90"
                         )}
                     >
-                        Update {type === 'income' ? 'Income' : 'Expense'}
+                        Update {type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'}
                     </Button>
                 </form>
             </DialogContent>
