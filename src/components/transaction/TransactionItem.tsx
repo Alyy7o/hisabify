@@ -89,7 +89,7 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
 
           <div className="flex items-center gap-3">
             <p className={cn(
-              "font-semibold text-sm shrink-0",
+              "font-semibold text-sm shrink-0 max-w-[100px] sm:max-w-[150px] truncate text-right",
               transaction.type === 'income' ? "text-success" : "text-destructive"
             )}>
               {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}

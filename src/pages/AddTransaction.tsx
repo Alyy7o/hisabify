@@ -32,6 +32,7 @@ export default function AddTransaction() {
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -67,6 +68,7 @@ export default function AddTransaction() {
     }
 
     try {
+      setIsSubmitting(true);
       await createTransactionMutation.mutateAsync({
         id: crypto.randomUUID(),
         walletId,
@@ -82,6 +84,8 @@ export default function AddTransaction() {
       navigate('/');
     } catch (error: any) {
       toast.error(error.message || 'Failed to add transaction');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -226,13 +230,14 @@ export default function AddTransaction() {
           {/* Submit Button */}
           <Button
             type="submit"
+            disabled={isSubmitting}
             className={cn(
               "w-full h-12 text-base font-semibold animate-fade-in",
               type === 'income' && "bg-success hover:bg-success/90"
             )}
             style={{ animationDelay: '350ms' }}
           >
-            Add {type === 'income' ? 'Income' : 'Expense'}
+            {isSubmitting ? 'Adding...' : `Add ${type === 'income' ? 'Income' : 'Expense'}`}
           </Button>
         </form>
       </div>

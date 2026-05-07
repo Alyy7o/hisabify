@@ -103,8 +103,8 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <p className="text-primary-foreground/80 text-sm font-medium">{t('dashboard.total_balance')}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative inline-flex min-h-9 items-center">
+            <div className="flex items-center gap-3 w-full">
+              <div className="relative inline-flex min-h-9 items-center flex-1 min-w-0">
                 <p
                   className={cn(
                     "text-2xl sm:text-3xl font-bold tracking-tight transition-all duration-200 ease-in-out truncate max-w-full",

@@ -27,6 +27,7 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
   const [reason, setReason] = useState('Transfer');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when dialog opens/closes
   useEffect(() => {
@@ -71,6 +72,7 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
         : `[Transfer: ${sourceWalletName} -> ${destWalletName}]`;
 
     try {
+      setIsSubmitting(true);
       // 1. Create Expense transaction for Source Wallet
       await createTransactionMutation.mutateAsync({
         id: crypto.randomUUID(),
@@ -99,6 +101,8 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
       toast.success('Transfer complete!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to complete transfer');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -215,8 +219,8 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
             />
           </div>
 
-          <Button type="submit" className="w-full h-11 text-base">
-             Complete Transfer
+          <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
+             {isSubmitting ? 'Transferring...' : 'Complete Transfer'}
           </Button>
         </form>
       </DialogContent>

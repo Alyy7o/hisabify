@@ -94,7 +94,7 @@ export default function Settlements() {
                 <HandCoins className="w-5 h-5" />
                 <p className="text-sm font-medium text-primary-foreground/80">Settlement</p>
               </div>
-              <p className="mt-2 text-3xl font-bold">Rs {(totalGiven + totalReceived).toLocaleString()}</p>
+              <p className="mt-2 text-3xl font-bold truncate max-w-[180px] xs:max-w-[250px] sm:max-w-[300px]">Rs {(totalGiven + totalReceived).toLocaleString()}</p>
               <p className="mt-1 text-sm text-primary-foreground/80">{activeCount} active settlement{activeCount !== 1 ? 's' : ''}</p>
             </div>
             <Button variant="secondary" onClick={() => setShowAddSettlement(true)} className="gap-2">
@@ -103,13 +103,13 @@ export default function Settlements() {
             </Button>
           </div>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl bg-primary-foreground/10 p-3">
-              <p className="text-primary-foreground/70">They owe you</p>
-              <p className="font-semibold">Rs {totalGiven.toLocaleString()}</p>
+            <div className="rounded-xl bg-primary-foreground/10 p-3 min-w-0">
+              <p className="text-primary-foreground/70 truncate">They owe you</p>
+              <p className="font-semibold truncate">Rs {totalGiven.toLocaleString()}</p>
             </div>
-            <div className="rounded-xl bg-primary-foreground/10 p-3">
-              <p className="text-primary-foreground/70">You owe them</p>
-              <p className="font-semibold">Rs {totalReceived.toLocaleString()}</p>
+            <div className="rounded-xl bg-primary-foreground/10 p-3 min-w-0">
+              <p className="text-primary-foreground/70 truncate">You owe them</p>
+              <p className="font-semibold truncate">Rs {totalReceived.toLocaleString()}</p>
             </div>
           </div>
         </Card>
@@ -179,10 +179,10 @@ export default function Settlements() {
                 <Card key={movement.id} className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-foreground">{settlement.personName}</p>
-                      <p className="text-sm text-muted-foreground">Payment · {settlement.title}</p>
+                      <p className="font-medium text-foreground truncate max-w-[150px] sm:max-w-[250px]">{settlement.personName}</p>
+                      <p className="text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-[250px]">Payment · {settlement.title}</p>
                     </div>
-                    <div className={`text-sm font-semibold ${movement.direction === 'inflow' ? 'text-success' : 'text-destructive'}`}>
+                    <div className={`text-sm font-semibold shrink-0 max-w-[100px] sm:max-w-[150px] truncate text-right ${movement.direction === 'inflow' ? 'text-success' : 'text-destructive'}`}>
                       {movement.direction === 'inflow' ? '+' : '-'}Rs {movement.amount.toLocaleString()}
                     </div>
                   </div>

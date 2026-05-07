@@ -31,6 +31,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when dialog opens/closes
   useEffect(() => {
@@ -65,6 +66,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
     let finalCategoryId = categoryId;
 
     try {
+      setIsSubmitting(true);
       if (categoryId === 'other') {
         if (!customCategoryName.trim()) {
           toast.error('Please enter a category name');
@@ -107,6 +109,8 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
       toast.success('Transaction added');
     } catch (error: any) {
       toast.error(error.message || 'Failed to add transaction');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -245,12 +249,13 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
 
           <Button
             type="submit"
+            disabled={isSubmitting}
             className={cn(
               "w-full",
               type === 'income' && "bg-success hover:bg-success/90"
             )}
           >
-            Add {type === 'income' ? 'Income' : 'Expense'}
+            {isSubmitting ? 'Adding...' : `Add ${type === 'income' ? 'Income' : 'Expense'}`}
           </Button>
         </form>
       </DialogContent>
