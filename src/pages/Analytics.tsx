@@ -293,11 +293,11 @@ export default function Analytics() {
 
         {/* Activity Chart */}
         {filter !== 'daily' && (
-          <Card className="p-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <Card className="p-4 animate-fade-in w-full overflow-hidden" style={{ animationDelay: '100ms' }}>
             <h3 className="font-semibold text-foreground mb-4">
               {filter === 'yearly' ? 'Monthly Activity' : 'Daily Activity'}
             </h3>
-            <div className="h-40">
+            <div className="h-40 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <XAxis
@@ -329,9 +329,9 @@ export default function Analytics() {
 
         {/* Category Breakdown */}
         {categoryData.length > 0 && (
-          <Card className="p-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <Card className="p-4 animate-fade-in w-full overflow-hidden" style={{ animationDelay: '200ms' }}>
             <h3 className="font-semibold text-foreground mb-4">Spending by Category</h3>
-            <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex flex-col sm:flex-row items-center gap-6 w-full">
               <div className="w-32 h-32 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -351,10 +351,10 @@ export default function Analytics() {
                   </PieChart>
                   </ResponsiveContainer>
               </div>
-              <div className="flex-1 w-full space-y-2">
+              <div className="flex-1 w-full space-y-2 min-w-0">
                 {categoryData.slice(0, 4).map((category) => (
-                  <div key={category.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div key={category.name} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: category.color }}

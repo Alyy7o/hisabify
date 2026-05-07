@@ -67,7 +67,7 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
         walletId: sourceWalletId,
         toWalletId: destinationWalletId,
         categoryId: 'transfer',
-        amount: transferAmount,
+        amount: parseFloat(amount),
         type: 'transfer',
         reason: reason.trim(),
         notes: notes.trim(),
