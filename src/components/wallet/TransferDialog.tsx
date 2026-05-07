@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
-import { useStore } from '@/store/useStore';
+import { useWallets, useCreateTransaction } from '@/hooks/useAppData';
 import { cn } from '@/lib/utils';
 import { ArrowRightLeft } from 'lucide-react';
 
@@ -19,7 +19,8 @@ interface TransferDialogProps {
 }
 
 export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: TransferDialogProps) {
-  const { addTransaction, wallets } = useStore();
+  const { data: wallets = [] } = useWallets();
+  const createTransactionMutation = useCreateTransaction();
   const [sourceWalletId, setSourceWalletId] = useState('');
   const [destinationWalletId, setDestinationWalletId] = useState('');
   const [amount, setAmount] = useState('');
@@ -39,7 +40,7 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
     }
   }, [open, defaultSourceWalletId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sourceWalletId || !destinationWalletId || !amount || parseFloat(amount) <= 0) {
         toast.error('Please fill in all required fields correctly.');
@@ -69,32 +70,36 @@ export function TransferDialog({ open, onOpenChange, defaultSourceWalletId }: Tr
         ? `${baseNotes}\n\n[Transfer: ${sourceWalletName} -> ${destWalletName}]`
         : `[Transfer: ${sourceWalletName} -> ${destWalletName}]`;
 
-    // 1. Create Expense transaction for Source Wallet
-    addTransaction({
-      id: crypto.randomUUID(),
-      walletId: sourceWalletId,
-      categoryId: 'transfer', // Using the new transfer category
-      amount: transferAmount,
-      type: 'expense',
-      reason: reason.trim(), // User requested same description for both
-      notes: formattedNotes,
-      date: new Date(date),
-    });
+    try {
+      // 1. Create Expense transaction for Source Wallet
+      await createTransactionMutation.mutateAsync({
+        id: crypto.randomUUID(),
+        walletId: sourceWalletId,
+        categoryId: 'transfer', // Using the new transfer category
+        amount: transferAmount,
+        type: 'expense',
+        reason: reason.trim(), // User requested same description for both
+        notes: formattedNotes,
+        date: new Date(date),
+      });
 
-    // 2. Create Income transaction for Destination Wallet
-    addTransaction({
-      id: crypto.randomUUID(),
-      walletId: destinationWalletId,
-      categoryId: 'transfer', // Using the new transfer category
-      amount: transferAmount,
-      type: 'income',
-      reason: reason.trim(), // User requested same description for both
-      notes: formattedNotes,
-      date: new Date(date),
-    });
+      // 2. Create Income transaction for Destination Wallet
+      await createTransactionMutation.mutateAsync({
+        id: crypto.randomUUID(),
+        walletId: destinationWalletId,
+        categoryId: 'transfer', // Using the new transfer category
+        amount: transferAmount,
+        type: 'income',
+        reason: reason.trim(), // User requested same description for both
+        notes: formattedNotes,
+        date: new Date(date),
+      });
 
-    onOpenChange(false);
-    toast.success('Transfer complete!');
+      onOpenChange(false);
+      toast.success('Transfer complete!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to complete transfer');
+    }
   };
 
   return (

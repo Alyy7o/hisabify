@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useStore } from '@/store/useStore';
+import { useDeleteWallet } from '@/hooks/useAppData';
 import { Wallet } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ interface WalletCardProps {
 }
 
 export function WalletCard({ wallet, onClick, compact = false, onEdit, onTransfer }: WalletCardProps) {
-  const { deleteWallet } = useStore();
+  const deleteWalletMutation = useDeleteWallet();
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-PK', { // Changed to en-PK for Rs formatting
@@ -35,7 +35,7 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit, onTransfe
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to delete this wallet?')) {
-      deleteWallet(wallet.id);
+      deleteWalletMutation.mutate(wallet.id);
     }
   };
 

@@ -18,7 +18,7 @@ import {
   Globe,
   FileText
 } from 'lucide-react';
-import { useStore } from '@/store/useStore';
+import { useWallets, useTransactions, useCategories } from '@/hooks/useAppData';
 import { useAuth } from '@/components/auth/AuthContext';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -43,7 +43,9 @@ import {
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
-  const { wallets, transactions } = useStore();
+  const { data: wallets = [] } = useWallets();
+  const { data: transactions = [] } = useTransactions();
+  const { data: categories = [] } = useCategories();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { isInstallable, isInstalled, isIos, installApp } = usePWA();
@@ -85,7 +87,7 @@ export default function Settings() {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map(t => {
           const wallet = wallets.find(w => w.id === t.walletId);
-          const category = useStore.getState().categories.find(c => c.id === t.categoryId);
+          const category = categories.find(c => c.id === t.categoryId);
           const description = t.reason.replace(/"/g, '""'); // Escape double quotes
 
           return [
@@ -157,7 +159,7 @@ export default function Settings() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .map(t => {
         const wallet = wallets.find(w => w.id === t.walletId);
-        const category = useStore.getState().categories.find(c => c.id === t.categoryId);
+        const category = categories.find(c => c.id === t.categoryId);
         return [
           new Date(t.date).toLocaleDateString(),
           t.type.toUpperCase(),

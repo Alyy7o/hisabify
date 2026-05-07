@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Wallet, Transaction, Category, Budget, Goal, DEFAULT_CATEGORIES, Settlement, SettlementMovement } from '@/lib/types';
-import { toast } from 'sonner';
 
 interface AppState {
   wallets: Wallet[];
@@ -60,6 +59,21 @@ interface AppState {
   getMonthlyIncome: () => number;
 }
 
+function normalizeSettlement(settlement: Settlement): Settlement {
+  const paidAmount = settlement.movements
+    .filter((movement) => movement.kind === 'payment')
+    .reduce((sum, movement) => sum + movement.amount, 0);
+  const remainingAmount = Math.max(0, settlement.totalAmount - paidAmount);
+
+  return {
+    ...settlement,
+    paidAmount,
+    remainingAmount,
+    status: remainingAmount <= 0 ? 'completed' : 'active',
+    updatedAt: settlement.updatedAt ?? new Date(),
+  };
+}
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -79,7 +93,6 @@ export const useStore = create<AppState>()(
       // Wallet actions
       addWallet: (wallet) => {
         set((state) => ({ wallets: [...state.wallets, wallet] }));
-        pushWalletToSupabase(wallet);
       },
       updateWallet: (id, updates) => {
         set((state) => ({
@@ -87,15 +100,12 @@ export const useStore = create<AppState>()(
             w.id === id ? { ...w, ...updates } : w
           ),
         }));
-        const updatedWallet = get().wallets.find(w => w.id === id);
-        if (updatedWallet) pushWalletToSupabase(updatedWallet);
       },
       deleteWallet: (id) => {
         set((state) => ({
           wallets: state.wallets.filter((w) => w.id !== id),
           transactions: state.transactions.filter((t) => t.walletId !== id),
         }));
-        deleteWalletFromSupabase(id);
       },
 
       // Transaction actions
@@ -117,7 +127,6 @@ export const useStore = create<AppState>()(
           }
           return { transactions: [...state.transactions, transaction] };
         });
-        pushTransactionToSupabase(transaction);
       },
       updateTransaction: (id, updates) => {
         set((state) => ({
@@ -125,8 +134,6 @@ export const useStore = create<AppState>()(
             t.id === id ? { ...t, ...updates } : t
           ),
         }));
-        const updatedTransaction = get().transactions.find(t => t.id === id);
-        if (updatedTransaction) pushTransactionToSupabase(updatedTransaction);
       },
       deleteTransaction: (id) => {
         set((state) => {
@@ -149,7 +156,6 @@ export const useStore = create<AppState>()(
           }
           return { transactions: state.transactions.filter(t => t.id !== id) };
         });
-        deleteTransactionFromSupabase(id);
       },
 
       // Settlement actions
@@ -160,8 +166,6 @@ export const useStore = create<AppState>()(
             settlements: [...state.settlements, normalizedSettlement],
           };
         });
-        const newSettlement = normalizeSettlement(settlement);
-        pushSettlementToSupabase(newSettlement);
       },
       updateSettlement: (id, updates) => {
         set((state) => ({
@@ -178,14 +182,11 @@ export const useStore = create<AppState>()(
             });
           }),
         }));
-        const updatedSettlement = get().settlements.find(s => s.id === id);
-        if (updatedSettlement) pushSettlementToSupabase(updatedSettlement);
       },
       deleteSettlement: (id) => {
         set((state) => ({
           settlements: state.settlements.filter((settlement) => settlement.id !== id),
         }));
-        deleteSettlementFromSupabase(id);
       },
       recordSettlementPayment: (settlementId, payload) => {
         const settlement = get().settlements.find((item) => item.id === settlementId);
@@ -226,9 +227,6 @@ export const useStore = create<AppState>()(
           }),
         }));
         
-        const updatedSettlement = get().settlements.find(s => s.id === settlementId);
-        if (updatedSettlement) pushSettlementToSupabase(updatedSettlement);
-
         get().addTransaction({
           id: crypto.randomUUID(),
           walletId: payload.walletId,
@@ -250,7 +248,6 @@ export const useStore = create<AppState>()(
         set((state) => ({
           categories: [...state.categories, category]
         }));
-        pushCategoryToSupabase(category);
       },
       updateCategory: (id, updates) => {
         set((state) => ({
@@ -258,14 +255,11 @@ export const useStore = create<AppState>()(
             c.id === id ? { ...c, ...updates } : c
           ),
         }));
-        const updatedCategory = get().categories.find(c => c.id === id);
-        if (updatedCategory) pushCategoryToSupabase(updatedCategory);
       },
       deleteCategory: (id) => {
         set((state) => ({
           categories: state.categories.filter((c) => c.id !== id),
         }));
-        deleteCategoryFromSupabase(id);
       },
 
       // Budget actions
@@ -335,259 +329,3 @@ export const useStore = create<AppState>()(
     }
   )
 );
-
-// Helper to push to Supabase
-async function pushWalletToSupabase(wallet: Wallet) {
-  try {
-    const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-    if (session.data.session?.user) {
-      console.log('Pushing wallet to Supabase:', wallet.name);
-      const { id, name, type, balance, currency, icon, color, createdAt } = wallet;
-      
-      // Safely handle createdAt field conversion
-      let created_at: string;
-      if (createdAt) {
-        try {
-          // Handle different formats: Date object, ISO string, or timestamp
-          if (createdAt instanceof Date) {
-            created_at = createdAt.toISOString();
-          } else if (typeof createdAt === 'string') {
-            // If it's already an ISO string, use it directly
-            created_at = new Date(createdAt).toISOString();
-          } else {
-            // Fallback to current time
-            created_at = new Date().toISOString();
-          }
-        } catch (dateError) {
-          console.warn('Failed to parse createdAt, using current time:', dateError);
-          created_at = new Date().toISOString();
-        }
-      } else {
-        created_at = new Date().toISOString();
-      }
-
-      const payload = { 
-        id, 
-        user_id: session.data.session!.user.id, 
-        name, 
-        type, 
-        balance, 
-        currency, 
-        icon, 
-        color,
-        created_at
-      };
-
-      console.log('Wallet Payload:', JSON.stringify(payload, null, 2));
-
-      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('wallets').upsert(payload));
-
-      if (error) {
-        console.error('Error syncing wallet:', error);
-        toast.error(`Failed to save wallet: ${error.message}`);
-      } else {
-        console.log('Wallet synced successfully');
-        toast.success('Wallet updated successfully');
-      }
-    } else {
-      console.log('No user session found, performing local only update');
-    }
-  } catch (err) {
-    console.error('Exception in pushWalletToSupabase:', err);
-    toast.error('Failed to sync wallet changes. Please check your connection.');
-  }
-}
-
-async function pushTransactionToSupabase(transaction: Transaction) {
-  try {
-    const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-    if (session.data.session?.user) {
-      console.log('Pushing transaction to Supabase');
-      const { id, walletId, amount, type, categoryId, reason, date, notes } = transaction;
-      
-      // Safely handle date conversion
-      let transactionDate: string;
-      try {
-        if (date instanceof Date) {
-          transactionDate = date.toISOString();
-        } else if (typeof date === 'string') {
-          transactionDate = new Date(date).toISOString();
-        } else {
-          transactionDate = new Date().toISOString();
-        }
-      } catch (dateError) {
-        console.warn('Failed to parse transaction date, using current time:', dateError);
-        transactionDate = new Date().toISOString();
-      }
-
-      const payload = {
-        id,
-        user_id: session.data.session!.user.id,
-        wallet_id: walletId,
-        amount,
-        type,
-        category_id: `${session.data.session!.user.id}_${categoryId}`,
-        reason,
-        date: transactionDate,
-        notes
-      };
-
-      console.log('Transaction Payload:', JSON.stringify(payload, null, 2));
-
-      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('transactions').upsert(payload));
-
-      if (error) {
-        console.error('Initial Transaction Sync Error:', error);
-        if (error.code === '23503') { // Foreign key violation (wallet_id not found)
-          console.warn('Transaction sync failed: Wallet not found in DB. Attempting to sync wallet first...');
-          const wallet = useStore.getState().wallets.find(w => w.id === walletId);
-
-          if (wallet) {
-            console.log('Found local wallet, syncing now:', wallet.name);
-            await pushWalletToSupabase(wallet);
-            // Retry transaction sync
-            console.log('Retrying transaction sync...');
-            const { error: retryError } = await import('@/lib/supabase').then(m => m.supabase.from('transactions').upsert(payload));
-
-            if (retryError) {
-              console.error('Error syncing transaction after wallet retry:', retryError);
-              toast.error(`Failed to save transaction: ${retryError.message}`);
-            } else {
-              console.log('Transaction synced successfully after wallet retry');
-              toast.success('Transaction saved successfully');
-            }
-          } else {
-            console.error('Local wallet not found for transaction:', walletId);
-            console.log('Available wallets:', useStore.getState().wallets.map(w => w.id));
-            toast.error('Cannot save transaction: associated wallet not found');
-          }
-        } else {
-          console.error('Error syncing transaction:', error);
-          toast.error(`Failed to save transaction: ${error.message}`);
-        }
-      } else {
-        console.log('Transaction synced successfully');
-        toast.success('Transaction saved successfully');
-      }
-    }
-  } catch (err) {
-    console.error('Exception in pushTransactionToSupabase:', err);
-    toast.error('Failed to sync transaction. Please check your connection.');
-  }
-}
-
-async function deleteWalletFromSupabase(id: string) {
-  const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-  if (session.data.session?.user) {
-    await import('@/lib/supabase').then(m => m.supabase.from('wallets').delete().eq('id', id));
-  }
-}
-
-async function deleteTransactionFromSupabase(id: string) {
-  const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-  if (session.data.session?.user) {
-    await import('@/lib/supabase').then(m => m.supabase.from('transactions').delete().eq('id', id));
-  }
-}
-
-function normalizeSettlement(settlement: Settlement): Settlement {
-  const paidAmount = settlement.movements
-    .filter((movement) => movement.kind === 'payment')
-    .reduce((sum, movement) => sum + movement.amount, 0);
-  const remainingAmount = Math.max(0, settlement.totalAmount - paidAmount);
-
-  return {
-    ...settlement,
-    paidAmount,
-    remainingAmount,
-    status: remainingAmount <= 0 ? 'completed' : 'active',
-    updatedAt: settlement.updatedAt ?? new Date(),
-  };
-}
-
-async function pushCategoryToSupabase(category: Category) {
-  try {
-    const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-    if (session.data.session?.user) {
-      console.log('Pushing category to Supabase:', category.name);
-      const { id, name, icon, color, type } = category;
-      const payload = {
-        id: `${session.data.session!.user.id}_${id}`,
-        user_id: session.data.session!.user.id,
-        name,
-        icon,
-        color,
-        type
-      };
-
-      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('categories').upsert(payload));
-
-      if (error) {
-        console.error('Error syncing category:', error);
-        toast.error(`Failed to save category: ${error.message}`);
-      } else {
-        console.log('Category synced successfully');
-        toast.success('Category saved successfully');
-      }
-    }
-  } catch (err) {
-    console.error('Exception in pushCategoryToSupabase:', err);
-    toast.error('Failed to sync category. Please check your connection.');
-  }
-}
-
-async function deleteCategoryFromSupabase(id: string) {
-  const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-  if (session.data.session?.user) {
-    await import('@/lib/supabase').then(m => m.supabase.from('categories').delete().eq('id', `${session.data.session!.user.id}_${id}`));
-  }
-}
-
-async function pushSettlementToSupabase(settlement: Settlement) {
-  try {
-    const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-    if (session.data.session?.user) {
-      console.log('Pushing settlement to Supabase:', settlement.title);
-      
-      const payload = {
-        id: settlement.id,
-        user_id: session.data.session!.user.id,
-        person_name: settlement.personName,
-        title: settlement.title,
-        kind: settlement.kind,
-        total_amount: settlement.totalAmount,
-        paid_amount: settlement.paidAmount,
-        remaining_amount: settlement.remainingAmount,
-        status: settlement.status,
-        due_date: settlement.dueDate ? new Date(settlement.dueDate).toISOString() : null,
-        wallet_id: settlement.walletId,
-        notes: settlement.notes,
-        split_total_amount: settlement.splitTotalAmount,
-        split_people_count: settlement.splitPeopleCount,
-        your_share: settlement.yourShare,
-        movements: settlement.movements,
-        created_at: settlement.createdAt ? new Date(settlement.createdAt).toISOString() : new Date().toISOString(),
-        updated_at: settlement.updatedAt ? new Date(settlement.updatedAt).toISOString() : new Date().toISOString()
-      };
-
-      const { error } = await import('@/lib/supabase').then(m => m.supabase.from('settlements').upsert(payload));
-
-      if (error) {
-        console.error('Error syncing settlement:', error);
-        toast.error(`Failed to save settlement: ${error.message}`);
-      } else {
-        console.log('Settlement synced successfully');
-      }
-    }
-  } catch (err) {
-    console.error('Exception in pushSettlementToSupabase:', err);
-    toast.error('Failed to sync settlement. Please check your connection.');
-  }
-}
-
-async function deleteSettlementFromSupabase(id: string) {
-  const session = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
-  if (session.data.session?.user) {
-    await import('@/lib/supabase').then(m => m.supabase.from('settlements').delete().eq('id', id));
-  }
-}

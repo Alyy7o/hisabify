@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { useStore } from '@/store/useStore';
+import { useWallets, useCategories, useCreateTransaction } from '@/hooks/useAppData';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -22,7 +22,9 @@ import { toast } from 'sonner';
 export default function AddTransaction() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { addTransaction, wallets, categories } = useStore();
+  const { data: wallets = [] } = useWallets();
+  const { data: categories = [] } = useCategories();
+  const createTransactionMutation = useCreateTransaction();
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [walletId, setWalletId] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -43,7 +45,7 @@ export default function AddTransaction() {
     c => c.type === type || c.type === 'both'
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (wallets.length === 0) {
@@ -64,19 +66,23 @@ export default function AddTransaction() {
       }
     }
 
-    addTransaction({
-      id: crypto.randomUUID(),
-      walletId,
-      categoryId,
-      amount: parseFloat(amount),
-      type,
-      reason: reason.trim(),
-      notes: notes.trim() || undefined,
-      date: new Date(date),
-    });
+    try {
+      await createTransactionMutation.mutateAsync({
+        id: crypto.randomUUID(),
+        walletId,
+        categoryId,
+        amount: parseFloat(amount),
+        type,
+        reason: reason.trim(),
+        notes: notes.trim() || undefined,
+        date: new Date(date),
+      });
 
-    toast.success(`${type === 'income' ? 'Income' : 'Expense'} added successfully`);
-    navigate('/');
+      toast.success(`${type === 'income' ? 'Income' : 'Expense'} added successfully`);
+      navigate('/');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add transaction');
+    }
   };
 
   return (

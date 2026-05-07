@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useStore } from '@/store/useStore';
+import { useRecordSettlementPayment, useWallets } from '@/hooks/useAppData';
 import { Settlement } from '@/lib/types';
 import { IconDisplay } from '@/components/common/IconDisplay';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
@@ -20,7 +20,8 @@ interface SettlementMovementDialogProps {
 }
 
 export function SettlementMovementDialog({ open, onOpenChange, settlement }: SettlementMovementDialogProps) {
-  const { recordSettlementPayment, wallets } = useStore();
+  const { data: wallets = [] } = useWallets();
+  const recordSettlementPaymentMutation = useRecordSettlementPayment();
   const [useSplit, setUseSplit] = useState(false);
   const [entryType, setEntryType] = useState<'paid' | 'remaining'>('paid');
   const [amountInput, setAmountInput] = useState('');
@@ -46,7 +47,7 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
   const movementDirection = settlement.kind === 'given' ? 'inflow' : 'outflow';
   const movementLabel = settlement.kind === 'given' ? 'Receive payment' : 'Send payment';
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     let paymentAmount = settlement.remainingAmount;
@@ -86,15 +87,20 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
       return;
     }
 
-    recordSettlementPayment(settlement.id, {
-      amount: paymentAmount,
-      walletId,
-      note: note.trim() || undefined,
-      date: new Date(date),
-    });
+    try {
+      await recordSettlementPaymentMutation.mutateAsync({
+        settlementId: settlement.id,
+        amount: paymentAmount,
+        walletId,
+        note: note.trim() || undefined,
+        date: new Date(date),
+      });
 
-    toast.success('Settlement updated and transaction added');
-    onOpenChange(false);
+      toast.success('Settlement updated and transaction added');
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to record payment');
+    }
   };
 
   return (

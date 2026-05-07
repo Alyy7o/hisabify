@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useStore } from '@/store/useStore';
+import { useWallets, useTransactions } from '@/hooks/useAppData';
 import { useAuth } from '@/components/auth/AuthContext';
 import { WalletCard } from '@/components/wallet/WalletCard';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
@@ -15,7 +15,8 @@ import { useTranslation } from 'react-i18next';
 
 export default function Index() {
   const navigate = useNavigate();
-  const { wallets, transactions, getTotalBalance, getMonthlyExpenses, getMonthlyIncome } = useStore();
+  const { data: wallets = [] } = useWallets();
+  const { data: transactions = [] } = useTransactions();
   const { user } = useAuth();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [editingWallet, setEditingWallet] = useState<any>(null);
@@ -30,9 +31,29 @@ export default function Index() {
     localStorage.setItem('dashboard-show-balance', String(showBalance));
   }, [showBalance]);
 
-  const totalBalance = getTotalBalance();
-  const monthlyExpenses = getMonthlyExpenses();
-  const monthlyIncome = getMonthlyIncome();
+  const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
+  
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  const monthlyExpenses = transactions
+    .filter(t => {
+      const date = new Date(t.date);
+      return t.type === 'expense' &&
+        date.getMonth() === currentMonth &&
+        date.getFullYear() === currentYear;
+    })
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const monthlyIncome = transactions
+    .filter(t => {
+      const date = new Date(t.date);
+      return t.type === 'income' &&
+        date.getMonth() === currentMonth &&
+        date.getFullYear() === currentYear;
+    })
+    .reduce((sum, t) => sum + t.amount, 0);
 
   const recentTransactions = [...transactions]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())

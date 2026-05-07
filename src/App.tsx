@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider, useAuth } from "@/components/auth/AuthContext";
 import { PWAProvider } from "@/components/pwa/PWAContext";
-import { useDataSync } from "@/hooks/useDataSync";
+import { useGuestMigration } from "@/hooks/useGuestMigration";
 import Index from "./pages/Index";
 import Wallets from "./pages/Wallets";
 import AddTransaction from "./pages/AddTransaction";
@@ -27,7 +27,7 @@ const queryClient = new QueryClient();
 // Auth Wrapper Component - handles data sync but doesn't force login
 const AuthWrapper = ({ children }: { children: ReactNode }) => {
   const { loading } = useAuth();
-  useDataSync(); // Enable data sync
+  useGuestMigration(); // Enable data sync on login
   // We can add logic here later to try syncing if a description exists in storage
 
   if (loading) {

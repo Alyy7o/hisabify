@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
-import { useStore } from '@/store/useStore';
+import { useWallets, useCategories, useCreateTransaction, useCreateCategory } from '@/hooks/useAppData';
 import { cn } from '@/lib/utils';
 import { Category } from '@/lib/types';
 
@@ -19,7 +19,10 @@ interface AddTransactionDialogProps {
 }
 
 export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expense' }: AddTransactionDialogProps) {
-  const { addTransaction, wallets, categories, addCategory } = useStore();
+  const { data: wallets = [] } = useWallets();
+  const { data: categories = [] } = useCategories();
+  const createTransactionMutation = useCreateTransaction();
+  const createCategoryMutation = useCreateCategory();
   const [type, setType] = useState<'income' | 'expense'>(defaultType);
   const [walletId, setWalletId] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -47,7 +50,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
     c => c.type === type || c.type === 'both'
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletId || !categoryId || !amount || !reason.trim()) return;
 
@@ -61,46 +64,50 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
 
     let finalCategoryId = categoryId;
 
-    if (categoryId === 'other') {
-      if (!customCategoryName.trim()) {
-        toast.error('Please enter a category name');
-        return;
+    try {
+      if (categoryId === 'other') {
+        if (!customCategoryName.trim()) {
+          toast.error('Please enter a category name');
+          return;
+        }
+
+        // Check if category already exists (case-insensitive)
+        const existingCategory = categories.find(
+          c => c.name.toLowerCase() === customCategoryName.trim().toLowerCase()
+        );
+
+        if (existingCategory) {
+          finalCategoryId = existingCategory.id;
+        } else {
+          // Create new category
+          const newCategory: Category = {
+            id: crypto.randomUUID(),
+            name: customCategoryName.trim(),
+            icon: '📦', // Default icon
+            color: 'hsl(0, 0%, 50%)', // Default color
+            type: 'both' // Safer to make it available for both
+          };
+          await createCategoryMutation.mutateAsync(newCategory);
+          finalCategoryId = newCategory.id;
+        }
       }
 
-      // Check if category already exists (case-insensitive)
-      const existingCategory = categories.find(
-        c => c.name.toLowerCase() === customCategoryName.trim().toLowerCase()
-      );
+      await createTransactionMutation.mutateAsync({
+        id: crypto.randomUUID(),
+        walletId,
+        categoryId: finalCategoryId,
+        amount: parseFloat(amount),
+        type,
+        reason: reason.trim(),
+        notes: notes.trim() || undefined,
+        date: new Date(date),
+      });
 
-      if (existingCategory) {
-        finalCategoryId = existingCategory.id;
-      } else {
-        // Create new category
-        const newCategory: Category = {
-          id: crypto.randomUUID(),
-          name: customCategoryName.trim(),
-          icon: '📦', // Default icon
-          color: 'hsl(0, 0%, 50%)', // Default color
-          type: 'both' // Safer to make it available for both
-        };
-        addCategory(newCategory);
-        finalCategoryId = newCategory.id;
-      }
+      onOpenChange(false);
+      toast.success('Transaction added');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add transaction');
     }
-
-    addTransaction({
-      id: crypto.randomUUID(),
-      walletId,
-      categoryId: finalCategoryId,
-      amount: parseFloat(amount),
-      type,
-      reason: reason.trim(),
-      notes: notes.trim() || undefined,
-      date: new Date(date),
-    });
-
-    onOpenChange(false);
-    toast.success('Transaction added');
   };
 
   return (

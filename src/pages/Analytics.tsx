@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
-import { useStore } from '@/store/useStore';
+import { useTransactions, useCategories } from '@/hooks/useAppData';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
@@ -34,7 +34,8 @@ import {
 type FilterType = 'daily' | 'monthly' | 'yearly';
 
 export default function Analytics() {
-  const { transactions, categories } = useStore();
+  const { data: transactions = [] } = useTransactions();
+  const { data: categories = [] } = useCategories();
   const [filter, setFilter] = useState<FilterType>('monthly');
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);

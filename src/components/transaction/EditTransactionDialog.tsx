@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
-import { useStore } from '@/store/useStore';
+import { useWallets, useCategories, useUpdateTransaction, useCreateCategory } from '@/hooks/useAppData';
 import { cn } from '@/lib/utils';
 import { Transaction, Category } from '@/lib/types';
 
@@ -19,7 +19,10 @@ interface EditTransactionDialogProps {
 }
 
 export function EditTransactionDialog({ open, onOpenChange, transaction }: EditTransactionDialogProps) {
-    const { updateTransaction, wallets, categories, addCategory } = useStore();
+    const { data: wallets = [] } = useWallets();
+    const { data: categories = [] } = useCategories();
+    const updateTransactionMutation = useUpdateTransaction();
+    const createCategoryMutation = useCreateCategory();
     const [type, setType] = useState<'income' | 'expense'>('expense');
     const [walletId, setWalletId] = useState('');
     const [categoryId, setCategoryId] = useState('');
@@ -46,7 +49,7 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
         c => c.type === type || c.type === 'both'
     );
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!transaction || !walletId || !categoryId || !amount || !reason.trim()) return;
 
@@ -57,45 +60,52 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
 
         let finalCategoryId = categoryId;
 
-        if (categoryId === 'other') {
-            if (!customCategoryName.trim()) {
-                toast.error('Please enter a category name');
-                return;
+        try {
+            if (categoryId === 'other') {
+                if (!customCategoryName.trim()) {
+                    toast.error('Please enter a category name');
+                    return;
+                }
+
+                // Check if category already exists (case-insensitive)
+                const existingCategory = categories.find(
+                    c => c.name.toLowerCase() === customCategoryName.trim().toLowerCase()
+                );
+
+                if (existingCategory) {
+                    finalCategoryId = existingCategory.id;
+                } else {
+                    // Create new category
+                    const newCategory: Category = {
+                        id: crypto.randomUUID(),
+                        name: customCategoryName.trim(),
+                        icon: '📦', // Default icon
+                        color: 'hsl(0, 0%, 50%)', // Default color
+                        type: 'both' // Safer to make it available for both
+                    };
+                    await createCategoryMutation.mutateAsync(newCategory);
+                    finalCategoryId = newCategory.id;
+                }
             }
 
-            // Check if category already exists (case-insensitive)
-            const existingCategory = categories.find(
-                c => c.name.toLowerCase() === customCategoryName.trim().toLowerCase()
-            );
+            await updateTransactionMutation.mutateAsync({
+                id: transaction.id,
+                updates: {
+                    walletId,
+                    categoryId: finalCategoryId,
+                    amount: parseFloat(amount),
+                    type,
+                    reason: reason.trim(),
+                    notes: notes.trim() || undefined,
+                    date: new Date(date),
+                }
+            });
 
-            if (existingCategory) {
-                finalCategoryId = existingCategory.id;
-            } else {
-                // Create new category
-                const newCategory: Category = {
-                    id: crypto.randomUUID(),
-                    name: customCategoryName.trim(),
-                    icon: '📦', // Default icon
-                    color: 'hsl(0, 0%, 50%)', // Default color
-                    type: 'both' // Safer to make it available for both
-                };
-                addCategory(newCategory);
-                finalCategoryId = newCategory.id;
-            }
+            onOpenChange(false);
+            toast.success('Transaction updated');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to update transaction');
         }
-
-        updateTransaction(transaction.id, {
-            walletId,
-            categoryId: finalCategoryId,
-            amount: parseFloat(amount),
-            type,
-            reason: reason.trim(),
-            notes: notes.trim() || undefined,
-            date: new Date(date),
-        });
-
-        onOpenChange(false);
-        toast.success('Transaction updated');
     };
 
     if (!transaction) return null;

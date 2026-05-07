@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { useStore } from '@/store/useStore';
+import { useWallets } from '@/hooks/useAppData';
 import { WalletCard } from '@/components/wallet/WalletCard';
 import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
 import { TransferDialog } from '@/components/wallet/TransferDialog';
@@ -15,7 +15,8 @@ export default function Wallets() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { wallets, getTotalBalance } = useStore();
+  const { data: wallets = [], isLoading } = useWallets();
+  const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferSourceWalletId, setTransferSourceWalletId] = useState('');
@@ -46,7 +47,7 @@ export default function Wallets() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Combined Balance</p>
-              <p className="text-2xl font-bold text-foreground">{formatCurrency(getTotalBalance())}</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalBalance)}</p>
             </div>
             <div className="text-right text-sm text-muted-foreground">
               <p>{wallets.length} wallet{wallets.length !== 1 ? 's' : ''}</p>
@@ -75,7 +76,11 @@ export default function Wallets() {
         </div>
 
         {/* Wallets Grid */}
-        {wallets.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : wallets.length === 0 ? (
           <Card className="p-8 border-dashed animate-fade-in">
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { IconDisplay } from '@/components/common/IconDisplay';
 import { Transaction } from '@/lib/types';
-import { useStore } from '@/store/useStore';
+import { useCategories, useWallets, useDeleteTransaction } from '@/hooks/useAppData';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -31,7 +31,9 @@ interface TransactionItemProps {
 }
 
 export function TransactionItem({ transaction, onClick, onEdit }: TransactionItemProps) {
-  const { categories, wallets, deleteTransaction } = useStore();
+  const { data: categories = [] } = useCategories();
+  const { data: wallets = [] } = useWallets();
+  const deleteTransactionMutation = useDeleteTransaction();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const category = categories.find(c => c.id === transaction.categoryId);
@@ -47,8 +49,13 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
     }).format(amount);
   };
 
-  const handleDelete = () => {
-    deleteTransaction(transaction.id);
+  const handleDelete = async () => {
+    await deleteTransactionMutation.mutateAsync({
+      id: transaction.id,
+      walletId: transaction.walletId,
+      amount: transaction.amount,
+      type: transaction.type
+    });
     setShowDeleteDialog(false);
   };
 

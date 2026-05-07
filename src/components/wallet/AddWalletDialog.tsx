@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useStore } from '@/store/useStore';
+import { useCreateWallet, useUpdateWallet } from '@/hooks/useAppData';
 import { WALLET_ICONS, WALLET_COLORS, Wallet } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +16,8 @@ interface AddWalletDialogProps {
 }
 
 export function AddWalletDialog({ open, onOpenChange, initialData }: AddWalletDialogProps) {
-  const { addWallet, updateWallet } = useStore();
+  const createWalletMutation = useCreateWallet();
+  const updateWalletMutation = useUpdateWallet();
   const [name, setName] = useState('');
   const [type, setType] = useState<'bank' | 'cash' | 'card' | 'savings'>('bank');
   const [balance, setBalance] = useState('');
@@ -44,33 +45,39 @@ export function AddWalletDialog({ open, onOpenChange, initialData }: AddWalletDi
     }
   }, [open, initialData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    if (initialData) {
-      updateWallet(initialData.id, {
-        name: name.trim(),
-        type,
-        balance: parseFloat(balance) || 0,
-        currency,
-        icon: selectedIcon,
-        color: selectedColor,
-      });
-    } else {
-      addWallet({
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        type,
-        balance: parseFloat(balance) || 0,
-        currency,
-        icon: selectedIcon,
-        color: selectedColor,
-        createdAt: new Date(),
-      });
+    try {
+      if (initialData) {
+        await updateWalletMutation.mutateAsync({
+          id: initialData.id,
+          updates: {
+            name: name.trim(),
+            type,
+            balance: parseFloat(balance) || 0,
+            currency,
+            icon: selectedIcon,
+            color: selectedColor,
+          }
+        });
+      } else {
+        await createWalletMutation.mutateAsync({
+          id: crypto.randomUUID(),
+          name: name.trim(),
+          type,
+          balance: parseFloat(balance) || 0,
+          currency,
+          icon: selectedIcon,
+          color: selectedColor,
+          createdAt: new Date(),
+        } as Wallet); // cast as Wallet since it handles missing fields if any
+      }
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
     }
-
-    onOpenChange(false);
   };
 
   return (

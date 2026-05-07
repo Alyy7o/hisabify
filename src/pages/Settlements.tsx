@@ -4,7 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useStore } from '@/store/useStore';
+import { useSettlements, useDeleteSettlement } from '@/hooks/useAppData';
 import { AddSettlementDialog } from '@/components/settlement/AddSettlementDialog';
 import { SettlementMovementDialog } from '@/components/settlement/SettlementMovementDialog';
 import { SettlementCard } from '@/components/settlement/SettlementCard';
@@ -14,7 +14,8 @@ import { format } from 'date-fns';
 type ViewFilter = 'active' | 'completed' | 'all';
 
 export default function Settlements() {
-  const { settlements, deleteSettlement } = useStore();
+  const { data: settlements = [], isLoading } = useSettlements();
+  const deleteSettlementMutation = useDeleteSettlement();
   const navigate = useNavigate();
   const location = useLocation();
   const [filter, setFilter] = useState<ViewFilter>('active');
@@ -74,7 +75,7 @@ export default function Settlements() {
   };
 
   const handleDeleteSettlement = (settlement: typeof settlements[number]) => {
-    deleteSettlement(settlement.id);
+    deleteSettlementMutation.mutate(settlement.id);
     if (movementSettlement?.id === settlement.id) {
       setMovementSettlement(null);
     }
@@ -133,7 +134,11 @@ export default function Settlements() {
           </Link>
         </div>
 
-        {visibleSettlements.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : visibleSettlements.length === 0 ? (
           <Card className="p-8 border-dashed">
             <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
               <History className="w-10 h-10" />
