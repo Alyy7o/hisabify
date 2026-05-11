@@ -251,7 +251,7 @@ export default function Analytics() {
 
   return (
     <AppLayout title={t('analytics.title')}>
-      <div className="py-4 space-y-6">
+      <div className="min-w-0 space-y-6 py-4">
         {/* Filter Tabs */}
         <div className="flex bg-secondary/50 p-1 rounded-lg animate-fade-in">
           {(['daily', 'monthly', 'yearly'] as const).map((f) => (
@@ -271,21 +271,27 @@ export default function Analytics() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fade-in">
-          <Card className="p-3 text-center">
-            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-success" />
+        <div className="grid grid-cols-1 gap-3 animate-fade-in sm:grid-cols-3">
+          <Card className="min-w-0 overflow-hidden p-3 text-center">
+            <TrendingUp className="mx-auto mb-1 h-5 w-5 text-success" />
             <p className="text-xs text-muted-foreground">{t('common.income')}</p>
-            <p className="text-sm font-bold text-success">{formatCurrency(filteredData.income)}</p>
+            <p className="truncate text-xs font-bold text-success tabular-nums sm:text-sm">
+              {formatCurrency(filteredData.income)}
+            </p>
           </Card>
-          <Card className="p-3 text-center">
-            <TrendingDown className="w-5 h-5 mx-auto mb-1 text-destructive" />
+          <Card className="min-w-0 overflow-hidden p-3 text-center">
+            <TrendingDown className="mx-auto mb-1 h-5 w-5 text-destructive" />
             <p className="text-xs text-muted-foreground">{t('common.expense')}</p>
-            <p className="text-sm font-bold text-destructive">{formatCurrency(filteredData.expense)}</p>
+            <p className="truncate text-xs font-bold text-destructive tabular-nums sm:text-sm">
+              {formatCurrency(filteredData.expense)}
+            </p>
           </Card>
-          <Card className="p-3 text-center">
-            <Activity className="w-5 h-5 mx-auto mb-1 text-primary" />
+          <Card className="min-w-0 overflow-hidden p-3 text-center">
+            <Activity className="mx-auto mb-1 h-5 w-5 text-primary" />
             <p className="text-xs text-muted-foreground">{t('analytics.net_flow')}</p>
-            <p className={`text-sm font-bold ${filteredData.net >= 0 ? 'text-success' : 'text-destructive'}`}>
+            <p
+              className={`truncate text-xs font-bold tabular-nums sm:text-sm ${filteredData.net >= 0 ? 'text-success' : 'text-destructive'}`}
+            >
               {formatCurrency(filteredData.net)}
             </p>
           </Card>
@@ -293,12 +299,12 @@ export default function Analytics() {
 
         {/* Activity Chart */}
         {filter !== 'daily' && (
-          <Card className="p-4 animate-fade-in w-full overflow-hidden" style={{ animationDelay: '100ms' }}>
-            <h3 className="font-semibold text-foreground mb-4">
+          <Card className="min-w-0 w-full animate-fade-in overflow-hidden p-4" style={{ animationDelay: '100ms' }}>
+            <h3 className="mb-4 font-semibold text-foreground">
               {filter === 'yearly' ? 'Monthly Activity' : 'Daily Activity'}
             </h3>
             <div className="h-40 w-full min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={chartData}>
                   <XAxis
                     dataKey="name"
@@ -329,11 +335,11 @@ export default function Analytics() {
 
         {/* Category Breakdown */}
         {categoryData.length > 0 && (
-          <Card className="p-4 animate-fade-in w-full overflow-hidden" style={{ animationDelay: '200ms' }}>
-            <h3 className="font-semibold text-foreground mb-4">Spending by Category</h3>
-            <div className="flex flex-col sm:flex-row items-center gap-6 w-full">
-              <div className="w-32 h-32 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
+          <Card className="min-w-0 w-full animate-fade-in overflow-hidden p-4" style={{ animationDelay: '200ms' }}>
+            <h3 className="mb-4 font-semibold text-foreground">Spending by Category</h3>
+            <div className="flex w-full min-w-0 flex-col items-center gap-6 sm:flex-row">
+              <div className="h-32 w-32 shrink-0 min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={categoryData}

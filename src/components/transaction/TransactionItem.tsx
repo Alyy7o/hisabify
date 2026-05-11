@@ -50,12 +50,7 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
   };
 
   const handleDelete = async () => {
-    await deleteTransactionMutation.mutateAsync({
-      id: transaction.id,
-      walletId: transaction.walletId,
-      amount: transaction.amount,
-      type: transaction.type
-    });
+    await deleteTransactionMutation.mutateAsync(transaction.id);
     setShowDeleteDialog(false);
   };
 

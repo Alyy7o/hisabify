@@ -21,7 +21,11 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import HelpFAQ from "./pages/HelpFAQ";
 import Privacy from "./pages/Privacy";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    mutations: { retry: false },
+  },
+});
 
 // Protected Route Component
 // Auth Wrapper Component - handles data sync but doesn't force login

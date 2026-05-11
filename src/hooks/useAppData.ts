@@ -121,6 +121,24 @@ function mapDbSettlementToClient(s: any): Settlement {
   };
 }
 
+/** Single DB transaction: adjust wallet(s) then insert row. Requires migration `create_transaction_with_wallets`. */
+async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction, userId: string) {
+  const payload = mapClientTransactionToDb(transaction, userId);
+  const toWalletId = transaction.type === 'transfer' ? transaction.toWalletId ?? null : null;
+  const { error } = await supabase.rpc('create_transaction_with_wallets', {
+    p_id: payload.id,
+    p_wallet_id: payload.wallet_id,
+    p_amount: payload.amount,
+    p_type: payload.type,
+    p_category_id: payload.category_id,
+    p_reason: payload.reason,
+    p_date: payload.date,
+    p_notes: payload.notes ?? '',
+    p_to_wallet_id: toWalletId,
+  });
+  if (error) throw error;
+}
+
 function mapClientSettlementToDb(s: Settlement, userId: string): any {
   return {
     id: s.id,
@@ -319,51 +337,8 @@ export function useCreateTransaction() {
         addGuestTransaction(transaction);
         return transaction;
       }
-      
-      // Update wallet balance remotely
-      const { data: walletData, error: walletQueryError } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('id', transaction.walletId)
-        .eq('user_id', user.id)
-        .single();
-        
-      if (walletQueryError) throw walletQueryError;
-      
-      let newBalance = walletData.balance;
-      if (transaction.type === 'income') newBalance += transaction.amount;
-      else if (transaction.type === 'expense') newBalance -= transaction.amount;
-      else if (transaction.type === 'transfer') newBalance -= transaction.amount;
-        
-      const { error: walletUpdateError } = await supabase
-        .from('wallets')
-        .update({ balance: newBalance })
-        .eq('id', transaction.walletId)
-        .eq('user_id', user.id);
-        
-      if (walletUpdateError) throw walletUpdateError;
 
-      // If transfer, also update destination wallet
-      if (transaction.type === 'transfer' && transaction.toWalletId) {
-        const { data: destWalletData, error: destWalletQueryError } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('id', transaction.toWalletId)
-          .eq('user_id', user.id)
-          .single();
-          
-        if (!destWalletQueryError && destWalletData) {
-           await supabase
-            .from('wallets')
-            .update({ balance: destWalletData.balance + transaction.amount })
-            .eq('id', transaction.toWalletId)
-            .eq('user_id', user.id);
-        }
-      }
-
-      const payload = mapClientTransactionToDb(transaction, user.id);
-      const { error } = await supabase.from('transactions').insert(payload);
-      if (error) throw error;
+      await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
       return transaction;
     },
     onSuccess: () => {
@@ -425,51 +400,15 @@ export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, walletId, amount, type, toWalletId }: { id: string, walletId: string, amount: number, type: 'income' | 'expense' | 'transfer', toWalletId?: string }) => {
+    mutationFn: async (id: string) => {
       if (!user) {
         deleteGuestTransaction(id);
         return;
       }
-      
-      // Update wallet balance remotely
-      const { data: walletData, error: walletQueryError } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('id', walletId)
-        .eq('user_id', user.id)
-        .single();
-        
-      if (!walletQueryError && walletData) {
-        let adjustment = 0;
-        if (type === 'income') adjustment = -amount;
-        else if (type === 'expense') adjustment = amount;
-        else if (type === 'transfer') adjustment = amount; // refund the source wallet
 
-        await supabase
-          .from('wallets')
-          .update({ balance: walletData.balance + adjustment })
-          .eq('id', walletId)
-          .eq('user_id', user.id);
-      }
-
-      // If transfer, ALSO refund the destination wallet
-      if (type === 'transfer' && toWalletId) {
-        const { data: destWalletData } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('id', toWalletId)
-          .eq('user_id', user.id)
-          .single();
-        if (destWalletData) {
-           await supabase
-            .from('wallets')
-            .update({ balance: destWalletData.balance - amount })
-            .eq('id', toWalletId)
-            .eq('user_id', user.id);
-        }
-      }
-
-      const { error } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', user.id);
+      const { error } = await supabase.rpc('delete_transaction_with_wallet_reversal', {
+        p_transaction_id: id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -696,29 +635,6 @@ export function useRecordSettlementPayment() {
 
       if (updateError) throw updateError;
 
-      // Update wallet balance
-      const { data: walletData, error: walletQueryError } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('id', payload.walletId)
-        .eq('user_id', user.id)
-        .single();
-        
-      if (walletQueryError) throw walletQueryError;
-      
-      const newBalance = transactionType === 'income' 
-        ? walletData.balance + paymentAmount 
-        : walletData.balance - paymentAmount;
-        
-      const { error: walletUpdateError } = await supabase
-        .from('wallets')
-        .update({ balance: newBalance })
-        .eq('id', payload.walletId)
-        .eq('user_id', user.id);
-        
-      if (walletUpdateError) throw walletUpdateError;
-
-      // Create transaction
       const transaction: Transaction = {
         id: crypto.randomUUID(),
         walletId: payload.walletId,
@@ -734,9 +650,7 @@ export function useRecordSettlementPayment() {
         date: payload.date,
       };
 
-      const transactionPayload = mapClientTransactionToDb(transaction, user.id);
-      const { error: txError } = await supabase.from('transactions').insert(transactionPayload);
-      if (txError) throw txError;
+      await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
     },
     onSuccess: () => {
       if (user) {

@@ -55,7 +55,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
   };
 
   return (
-    <div className="min-h-screen bg-background flex w-full overflow-x-hidden">
+    <div className="min-h-screen bg-background flex w-full min-w-0 overflow-x-hidden">
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex w-64 flex-col border-r bg-card/50 backdrop-blur-xl h-screen sticky top-0">
         <div className="p-6 border-b flex items-center gap-2">
@@ -119,7 +119,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen relative">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 relative overflow-x-hidden">
         {/* Desktop Header for Language Toggle */}
         <header className="hidden md:flex justify-end p-4 absolute top-0 right-0 z-50 pointer-events-none">
           <div className="pointer-events-auto">
@@ -145,7 +145,7 @@ export const AppLayout = ({ children, title, showNav = true }: AppLayoutProps) =
         </header>
 
         <main className={cn(
-          "flex-1 px-4 py-4 max-w-3xl mx-auto w-full",
+          "mx-auto w-full min-w-0 max-w-3xl flex-1 px-4 py-4",
           showNav ? "pb-24 md:pb-4" : "pb-4"
         )}>
           {children}

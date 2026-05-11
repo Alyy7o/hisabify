@@ -66,11 +66,14 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit, onTransfe
             <p className="font-medium text-sm truncate">{wallet.name}</p>
             <p className="text-xs text-muted-foreground capitalize">{wallet.type}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <p className={cn(
-              "font-semibold text-sm",
-              wallet.balance >= 0 ? "text-success" : "text-destructive"
-            )}>
+          <div className="flex min-w-0 max-w-[45%] shrink items-center justify-end gap-2 sm:max-w-[50%]">
+            <p
+              className={cn(
+                "truncate text-right text-xs font-semibold tabular-nums sm:text-sm",
+                wallet.balance >= 0 ? "text-success" : "text-destructive"
+              )}
+              title={formatCurrency(wallet.balance, wallet.currency)}
+            >
               {formatCurrency(wallet.balance, wallet.currency)}
             </p>
             <DropdownMenu>
@@ -142,10 +145,13 @@ export function WalletCard({ wallet, onClick, compact = false, onEdit, onTransfe
         </div>
       </div>
       <h3 className="font-semibold text-foreground mb-1">{wallet.name}</h3>
-      <p className={cn(
-        "text-xl font-bold",
-        wallet.balance >= 0 ? "text-success" : "text-destructive"
-      )}>
+      <p
+        className={cn(
+          "truncate text-xl font-bold tabular-nums",
+          wallet.balance >= 0 ? "text-success" : "text-destructive"
+        )}
+        title={formatCurrency(wallet.balance, wallet.currency)}
+      >
         {formatCurrency(wallet.balance, wallet.currency)}
       </p>
     </Card>
