@@ -19,6 +19,7 @@ export interface Transaction {
   reason: string;
   date: Date;
   notes?: string;
+  receiptUrl?: string;
 }
 
 export interface Category {
@@ -61,6 +62,7 @@ export interface SettlementMovement {
   applyToWallet: boolean;
   note?: string;
   date: Date;
+  receiptUrl?: string;
 }
 
 export interface Settlement {
@@ -75,6 +77,7 @@ export interface Settlement {
   dueDate?: Date;
   walletId?: string;
   notes?: string;
+  receiptUrl?: string;
   splitTotalAmount?: number;
   splitPeopleCount?: number;
   yourShare?: number;

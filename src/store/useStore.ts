@@ -35,6 +35,8 @@ interface AppState {
     walletId: string;
     date: Date;
     note?: string;
+    movementId?: string;
+    receiptUrl?: string;
   }) => void;
 
   // Category actions
@@ -218,7 +220,7 @@ export const useStore = create<AppState>()(
         const movementDirection: SettlementMovement['direction'] = settlement.kind === 'given' ? 'inflow' : 'outflow';
         const transactionType: Transaction['type'] = settlement.kind === 'given' ? 'income' : 'expense';
         const movement: SettlementMovement = {
-          id: crypto.randomUUID(),
+          id: payload.movementId ?? crypto.randomUUID(),
           settlementId,
           kind: 'payment',
           direction: movementDirection,
@@ -227,6 +229,7 @@ export const useStore = create<AppState>()(
           applyToWallet: true,
           note: payload.note,
           date: payload.date,
+          receiptUrl: payload.receiptUrl,
         };
 
         set((state) => ({
@@ -256,6 +259,7 @@ export const useStore = create<AppState>()(
             ? `${settlement.title}\n${payload.note.trim()}`
             : settlement.title,
           date: payload.date,
+          receiptUrl: payload.receiptUrl,
         });
       },
 

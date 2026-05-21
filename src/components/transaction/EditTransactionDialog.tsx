@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { useWallets, useCategories, useUpdateTransaction, useCreateCategory } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthContext';
+import { ReceiptUploadField } from '@/components/common/ReceiptUploadField';
+import { resolveReceiptForSave, receiptStoragePath } from '@/lib/receipts';
 import { cn } from '@/lib/utils';
 import { Transaction, Category } from '@/lib/types';
 
@@ -21,8 +24,11 @@ interface EditTransactionDialogProps {
 export function EditTransactionDialog({ open, onOpenChange, transaction }: EditTransactionDialogProps) {
     const { data: wallets = [] } = useWallets();
     const { data: categories = [] } = useCategories();
+    const { user } = useAuth();
     const updateTransactionMutation = useUpdateTransaction();
     const createCategoryMutation = useCreateCategory();
+    const [receiptFile, setReceiptFile] = useState<File | null>(null);
+    const [storedReceiptUrl, setStoredReceiptUrl] = useState<string | undefined>();
     const [type, setType] = useState<'income' | 'expense' | 'transfer'>('expense');
     const [walletId, setWalletId] = useState('');
     const [categoryId, setCategoryId] = useState('');
@@ -42,6 +48,8 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
             setReason(transaction.reason);
             setNotes(transaction.notes || '');
             setDate(new Date(transaction.date).toISOString().split('T')[0]);
+            setStoredReceiptUrl(transaction.receiptUrl);
+            setReceiptFile(null);
         }
     }, [transaction, open]);
 
@@ -88,6 +96,18 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
                 }
             }
 
+            const receiptUrl = await resolveReceiptForSave(receiptFile, storedReceiptUrl, {
+                userId: user?.id ?? null,
+                storagePath: user
+                    ? receiptStoragePath(
+                        user.id,
+                        'transactions',
+                        transaction.id,
+                        receiptFile?.name || 'receipt.jpg'
+                    )
+                    : '',
+            });
+
             await updateTransactionMutation.mutateAsync({
                 id: transaction.id,
                 updates: {
@@ -98,6 +118,7 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
                     reason: reason.trim(),
                     notes: notes.trim() || undefined,
                     date: new Date(date),
+                    receiptUrl,
                 }
             });
 
@@ -249,6 +270,13 @@ export function EditTransactionDialog({ open, onOpenChange, transaction }: EditT
                             rows={2}
                         />
                     </div>
+
+                    <ReceiptUploadField
+                        value={storedReceiptUrl}
+                        pendingFile={receiptFile}
+                        onPendingFileChange={setReceiptFile}
+                        onClearStored={() => setStoredReceiptUrl(undefined)}
+                    />
 
                     <Button
                         type="submit"

@@ -77,7 +77,8 @@ export function useGuestMigration() {
             category_id: `${user.id}_${t.categoryId}`,
             reason: t.reason,
             date: t.date instanceof Date ? t.date.toISOString() : new Date(t.date).toISOString(),
-            notes: t.notes
+            notes: t.notes,
+            receipt_url: t.receiptUrl ?? null,
           }));
           const { error } = await supabase.from('transactions').upsert(transactionsPayload);
           if (error) throw new Error(`Transactions sync failed: ${error.message}`);
@@ -102,6 +103,7 @@ export function useGuestMigration() {
             split_people_count: s.splitPeopleCount,
             your_share: s.yourShare,
             movements: s.movements,
+            receipt_url: s.receiptUrl ?? null,
             created_at: s.createdAt instanceof Date ? s.createdAt.toISOString() : new Date().toISOString(),
             updated_at: s.updatedAt instanceof Date ? s.updatedAt.toISOString() : new Date().toISOString()
           }));

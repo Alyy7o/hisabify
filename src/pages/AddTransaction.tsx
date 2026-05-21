@@ -15,6 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useWallets, useCategories, useCreateTransaction } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthContext';
+import { ReceiptUploadField } from '@/components/common/ReceiptUploadField';
+import { resolveReceiptForSave, receiptStoragePath } from '@/lib/receipts';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -24,7 +27,9 @@ export default function AddTransaction() {
   const location = useLocation();
   const { data: wallets = [] } = useWallets();
   const { data: categories = [] } = useCategories();
+  const { user } = useAuth();
   const createTransactionMutation = useCreateTransaction();
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [walletId, setWalletId] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -69,8 +74,16 @@ export default function AddTransaction() {
 
     try {
       setIsSubmitting(true);
+      const transactionId = crypto.randomUUID();
+      const receiptUrl = await resolveReceiptForSave(receiptFile, undefined, {
+        userId: user?.id ?? null,
+        storagePath: user
+          ? receiptStoragePath(user.id, 'transactions', transactionId, receiptFile?.name || 'receipt.jpg')
+          : '',
+      });
+
       await createTransactionMutation.mutateAsync({
-        id: crypto.randomUUID(),
+        id: transactionId,
         walletId,
         categoryId,
         amount: parseFloat(amount),
@@ -78,6 +91,7 @@ export default function AddTransaction() {
         reason: reason.trim(),
         notes: notes.trim() || undefined,
         date: new Date(date),
+        receiptUrl,
       });
 
       toast.success(`${type === 'income' ? 'Income' : 'Expense'} added successfully`);
@@ -225,6 +239,10 @@ export default function AddTransaction() {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
             />
+          </div>
+
+          <div className="animate-fade-in" style={{ animationDelay: '320ms' }}>
+            <ReceiptUploadField pendingFile={receiptFile} onPendingFileChange={setReceiptFile} />
           </div>
 
           {/* Submit Button */}

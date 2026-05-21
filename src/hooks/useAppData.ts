@@ -55,6 +55,7 @@ function mapDbTransactionToClient(t: any, userId: string): Transaction {
     toWalletId,
     type,
     notes,
+    receiptUrl: t.receipt_url ?? undefined,
     date: new Date(t.date),
   };
 }
@@ -77,7 +78,8 @@ function mapClientTransactionToDb(t: Transaction, userId: string): any {
     category_id: dbCategoryId,
     reason: t.reason,
     date: t.date instanceof Date ? t.date.toISOString() : new Date(t.date).toISOString(),
-    notes: notes
+    notes: notes,
+    receipt_url: t.receiptUrl ?? null,
   };
 }
 
@@ -115,7 +117,11 @@ function mapDbSettlementToClient(s: any): Settlement {
     splitTotalAmount: s.split_total_amount ? Number(s.split_total_amount) : undefined,
     splitPeopleCount: s.split_people_count ? Number(s.split_people_count) : undefined,
     yourShare: s.your_share ? Number(s.your_share) : undefined,
-    movements: s.movements || [],
+    movements: (s.movements || []).map((m: SettlementMovement) => ({
+      ...m,
+      date: m.date ? new Date(m.date) : new Date(),
+    })),
+    receiptUrl: s.receipt_url ?? undefined,
     createdAt: new Date(s.created_at),
     updatedAt: new Date(s.updated_at),
   };
@@ -137,6 +143,15 @@ async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction,
     p_to_wallet_id: toWalletId,
   });
   if (error) throw error;
+
+  if (transaction.receiptUrl) {
+    const { error: receiptError } = await supabase
+      .from('transactions')
+      .update({ receipt_url: transaction.receiptUrl })
+      .eq('id', transaction.id)
+      .eq('user_id', userId);
+    if (receiptError) throw receiptError;
+  }
 }
 
 function mapClientSettlementToDb(s: Settlement, userId: string): any {
@@ -157,6 +172,7 @@ function mapClientSettlementToDb(s: Settlement, userId: string): any {
     split_people_count: s.splitPeopleCount,
     your_share: s.yourShare,
     movements: s.movements,
+    receipt_url: s.receiptUrl ?? null,
     created_at: s.createdAt instanceof Date ? s.createdAt.toISOString() : new Date().toISOString(),
     updated_at: s.updatedAt instanceof Date ? s.updatedAt.toISOString() : new Date().toISOString()
   };
@@ -377,6 +393,7 @@ export function useUpdateTransaction() {
       if (updates.reason !== undefined) payload.reason = updates.reason;
       if (updates.date !== undefined) payload.date = updates.date instanceof Date ? updates.date.toISOString() : new Date(updates.date).toISOString();
       if (updates.notes !== undefined) payload.notes = updates.notes;
+      if (updates.receiptUrl !== undefined) payload.receipt_url = updates.receiptUrl ?? null;
 
       // Note: we don't handle balance recalculation here for simplicity, but normally
       // updating a transaction amount/type requires adjusting the wallet balance.
@@ -538,6 +555,7 @@ export function useUpdateSettlement() {
       if (updates.splitPeopleCount !== undefined) payload.split_people_count = updates.splitPeopleCount;
       if (updates.yourShare !== undefined) payload.your_share = updates.yourShare;
       if (updates.movements !== undefined) payload.movements = updates.movements;
+      if (updates.receiptUrl !== undefined) payload.receipt_url = updates.receiptUrl ?? null;
       payload.updated_at = new Date().toISOString();
 
       const { error } = await supabase.from('settlements').update(payload).eq('id', id).eq('user_id', user.id);
@@ -575,7 +593,17 @@ export function useRecordSettlementPayment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ settlementId, payload }: { settlementId: string, payload: { amount: number, walletId: string, date: Date, note?: string } }) => {
+    mutationFn: async ({ settlementId, payload }: {
+      settlementId: string;
+      payload: {
+        amount: number;
+        walletId: string;
+        date: Date;
+        note?: string;
+        movementId?: string;
+        receiptUrl?: string;
+      };
+    }) => {
       if (!user) {
         recordGuestPayment(settlementId, payload);
         return;
@@ -602,7 +630,7 @@ export function useRecordSettlementPayment() {
       const transactionType: Transaction['type'] = settlement.kind === 'given' ? 'income' : 'expense';
       
       const movement: SettlementMovement = {
-        id: crypto.randomUUID(),
+        id: payload.movementId ?? crypto.randomUUID(),
         settlementId,
         kind: 'payment',
         direction: movementDirection,
@@ -611,6 +639,7 @@ export function useRecordSettlementPayment() {
         applyToWallet: true,
         note: payload.note,
         date: payload.date,
+        receiptUrl: payload.receiptUrl,
       };
 
       const updatedMovements = [...settlement.movements, movement];
@@ -648,6 +677,7 @@ export function useRecordSettlementPayment() {
           ? `${settlement.title}\n${payload.note.trim()}`
           : settlement.title,
         date: payload.date,
+        receiptUrl: payload.receiptUrl,
       };
 
       await supabaseRpcCreateTransactionWithWallets(transaction, user.id);

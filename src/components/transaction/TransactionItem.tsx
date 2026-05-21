@@ -5,7 +5,7 @@ import { useCategories, useWallets, useDeleteTransaction } from '@/hooks/useAppD
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { MoreVertical, Pencil, Trash2, ArrowRightLeft } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, ArrowRightLeft, Eye, Receipt } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,6 +89,9 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
               <span>{category?.name || 'Other'}</span>
               <span>•</span>
               <span>{format(new Date(transaction.date), 'MMM d')}</span>
+              {transaction.receiptUrl && (
+                <Receipt className="h-3 w-3 shrink-0 text-primary" aria-label="Has receipt" />
+              )}
             </div>
           </div>
 
@@ -110,6 +113,17 @@ export function TransactionItem({ transaction, onClick, onEdit }: TransactionIte
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {onClick && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClick();
+                    }}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View details
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleEdit}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit

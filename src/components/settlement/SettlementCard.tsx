@@ -29,9 +29,10 @@ interface SettlementCardProps {
   onAddPayment: (settlement: Settlement) => void;
   onEdit: (settlement: Settlement) => void;
   onDelete: (settlement: Settlement) => void;
+  onView?: (settlement: Settlement) => void;
 }
 
-export function SettlementCard({ settlement, onAddPayment, onEdit, onDelete }: SettlementCardProps) {
+export function SettlementCard({ settlement, onAddPayment, onEdit, onDelete, onView }: SettlementCardProps) {
   const typeLabel = settlement.kind === 'given' ? 'They owe you' : 'You owe them';
   const amountTone = settlement.kind === 'given' ? 'text-success' : 'text-destructive';
   const progress = settlement.totalAmount > 0
@@ -42,7 +43,10 @@ export function SettlementCard({ settlement, onAddPayment, onEdit, onDelete }: S
 
   return (
     <>
-      <Card className="p-4 border-border/60 bg-card/80 shadow-sm animate-fade-in">
+      <Card
+        className="cursor-pointer p-4 border-border/60 bg-card/80 shadow-sm animate-fade-in transition-shadow hover:shadow-md"
+        onClick={() => onView?.(settlement)}
+      >
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -64,18 +68,40 @@ export function SettlementCard({ settlement, onAddPayment, onEdit, onDelete }: S
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
+                  <Button
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <span className="sr-only">Open menu</span>
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(settlement)}>
+                  {onView && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onView(settlement);
+                      }}
+                    >
+                      View details
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(settlement);
+                    }}
+                  >
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => setShowDeleteDialog(true)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDeleteDialog(true);
+                    }}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -119,7 +145,14 @@ export function SettlementCard({ settlement, onAddPayment, onEdit, onDelete }: S
         )}
 
           {settlement.status === 'active' && (
-            <Button className="w-full gap-2" variant="secondary" onClick={() => onAddPayment(settlement)}>
+            <Button
+              className="w-full gap-2"
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddPayment(settlement);
+              }}
+            >
               <PlusCircle className="w-4 h-4" />
               Record payment
             </Button>

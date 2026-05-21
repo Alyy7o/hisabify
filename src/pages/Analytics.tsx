@@ -4,6 +4,9 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { useTransactions, useCategories } from '@/hooks/useAppData';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
+import { TransactionDetailDialog } from '@/components/transaction/TransactionDetailDialog';
+import { AnalyticsDateFilter, type AnalyticsFilterType } from '@/components/analytics/AnalyticsDateFilter';
+import { getAnalyticsDateRange } from '@/lib/analyticsDateRange';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import {
@@ -12,14 +15,12 @@ import {
   endOfMonth,
   eachDayOfInterval,
   isSameDay,
-  startOfDay,
-  endOfDay,
   startOfYear,
   endOfYear,
   eachMonthOfInterval,
-  isSameMonth
+  isSameMonth,
+  differenceInCalendarDays,
 } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { EditTransactionDialog } from '@/components/transaction/EditTransactionDialog';
 import {
   Pagination,
@@ -29,69 +30,60 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
+} from '@/components/ui/pagination';
+import { Transaction } from '@/lib/types';
 
-type FilterType = 'daily' | 'monthly' | 'yearly';
+const todayIso = () => format(new Date(), 'yyyy-MM-dd');
 
 export default function Analytics() {
   const { data: transactions = [] } = useTransactions();
   const { data: categories = [] } = useCategories();
-  const [filter, setFilter] = useState<FilterType>('monthly');
-  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [filter, setFilter] = useState<AnalyticsFilterType>('monthly');
+  const [selectedDay, setSelectedDay] = useState(todayIso);
+  const [rangeStart, setRangeStart] = useState(() => format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [rangeEnd, setRangeEnd] = useState(todayIso);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const { t } = useTranslation();
   const ITEMS_PER_PAGE = 10;
 
-  // Reset page when filter changes
+  const dateRange = useMemo(
+    () => getAnalyticsDateRange(filter, { selectedDay, rangeStart, rangeEnd }),
+    [filter, selectedDay, rangeStart, rangeEnd]
+  );
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter]);
+  }, [filter, selectedDay, rangeStart, rangeEnd]);
 
-  // Filter Transactions based on time range
   const filteredData = useMemo(() => {
-    const now = new Date();
-    let start: Date, end: Date;
-
-    switch (filter) {
-      case 'daily':
-        start = startOfDay(now);
-        end = endOfDay(now);
-        break;
-      case 'yearly':
-        start = startOfYear(now);
-        end = endOfYear(now);
-        break;
-      case 'monthly':
-      default:
-        start = startOfMonth(now);
-        end = endOfMonth(now);
-        break;
-    }
-
-    const relevantTransactions = transactions.filter(t => {
+    const { start, end } = dateRange;
+    const relevantTransactions = transactions.filter((t) => {
       const date = new Date(t.date);
       return date >= start && date <= end;
     });
 
     const income = relevantTransactions
-      .filter(t => t.type === 'income')
+      .filter((t) => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
 
     const expense = relevantTransactions
-      .filter(t => t.type === 'expense')
+      .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
 
     return {
       transactions: relevantTransactions,
       income,
       expense,
-      net: income - expense
+      net: income - expense,
+      start,
+      end,
     };
-  }, [transactions, filter]);
+  }, [transactions, dateRange]);
 
-  // Category breakdown
   const categoryData = useMemo(() => {
-    const expenses = filteredData.transactions.filter(t => t.type === 'expense');
+    const expenses = filteredData.transactions.filter((t) => t.type === 'expense');
     const categoryTotals = expenses.reduce((acc, t) => {
       acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
       return acc;
@@ -99,7 +91,7 @@ export default function Analytics() {
 
     return Object.entries(categoryTotals)
       .map(([categoryId, amount]) => {
-        const category = categories.find(c => c.id === categoryId);
+        const category = categories.find((c) => c.id === categoryId);
         return {
           name: category?.name || 'Other',
           value: amount,
@@ -110,75 +102,102 @@ export default function Analytics() {
       .sort((a, b) => b.value - a.value);
   }, [filteredData.transactions, categories]);
 
-  // Bar Chart Data
   const chartData = useMemo(() => {
-    const now = new Date();
+    const { start, end } = filteredData;
 
     if (filter === 'yearly') {
-      const months = eachMonthOfInterval({
-        start: startOfYear(now),
-        end: endOfYear(now)
-      });
-
-      return months.map(month => {
-        const monthTransactions = filteredData.transactions.filter(t =>
+      const months = eachMonthOfInterval({ start: startOfYear(start), end: endOfYear(start) });
+      return months.map((month) => {
+        const monthTransactions = filteredData.transactions.filter((t) =>
           isSameMonth(new Date(t.date), month)
         );
-
-        const income = monthTransactions
-          .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
-        const expense = monthTransactions
-          .filter(t => t.type === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0);
-
         return {
           name: format(month, 'MMM'),
-          income,
-          expense,
-        };
-      });
-    } else if (filter === 'monthly') {
-      const days = eachDayOfInterval({
-        start: startOfMonth(now),
-        end: now
-      });
-      // to keep it consistent with "monthly" view, we might want full month, but user context implies "latest".
-      // Let's use full month days for the chart x-axis if we want the scale to be consistent, but usually plotting up to 'now' is fine.
-      // However, previous code used full month logic in one branch. I will replicate the "show up to today" logic for simplicity or full month if desired.
-      // Reverting to full month for x-axis consistency as per earlier code snippet I wrote.
-      const fullMonthDays = eachDayOfInterval({
-        start: startOfMonth(now),
-        end: endOfMonth(now)
-      });
-
-      return fullMonthDays.map(day => {
-        const dayTransactions = filteredData.transactions.filter(t =>
-          isSameDay(new Date(t.date), day)
-        );
-
-        const income = dayTransactions
-          .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
-        const expense = dayTransactions
-          .filter(t => t.type === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0);
-
-        return {
-          name: format(day, 'd'),
-          income,
-          expense,
+          income: monthTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+          expense: monthTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
         };
       });
     }
 
-    return []; // No chart for daily
-  }, [filteredData.transactions, filter]);
+    if (filter === 'monthly') {
+      const days = eachDayOfInterval({ start: startOfMonth(start), end: endOfMonth(start) });
+      return days.map((day) => {
+        const dayTransactions = filteredData.transactions.filter((t) =>
+          isSameDay(new Date(t.date), day)
+        );
+        return {
+          name: format(day, 'd'),
+          income: dayTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+          expense: dayTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+        };
+      });
+    }
 
-  // Calculate pagination
+    if (filter === 'today' || filter === 'day') {
+      return [
+        {
+          name: format(start, 'MMM d'),
+          income: filteredData.transactions
+            .filter((t) => t.type === 'income')
+            .reduce((s, t) => s + t.amount, 0),
+          expense: filteredData.transactions
+            .filter((t) => t.type === 'expense')
+            .reduce((s, t) => s + t.amount, 0),
+        },
+      ];
+    }
+
+    if (filter === 'range') {
+      const days = eachDayOfInterval({ start, end });
+      return days.map((day) => {
+        const dayTransactions = filteredData.transactions.filter((t) =>
+          isSameDay(new Date(t.date), day)
+        );
+        return {
+          name: format(day, 'MMM d'),
+          income: dayTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+          expense: dayTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+        };
+      });
+    }
+
+    return [];
+  }, [filteredData, filter]);
+
+  const chartTickInterval = useMemo(() => {
+    if (filter === 'yearly') return 0;
+    if (filter === 'monthly') return 2;
+    if (filter === 'range') {
+      const days = differenceInCalendarDays(filteredData.end, filteredData.start) + 1;
+      if (days <= 14) return 0;
+      return Math.max(1, Math.floor(days / 7));
+    }
+    return 0;
+  }, [filter, filteredData.end, filteredData.start]);
+
+  const listTitle = useMemo(() => {
+    if (filter === 'today') return t('analytics.todays_transactions', { defaultValue: "Today's transactions" });
+    if (filter === 'day') {
+      return t('analytics.day_transactions', {
+        defaultValue: 'Transactions on {{date}}',
+        date: format(filteredData.start, 'PPP'),
+      });
+    }
+    if (filter === 'range') {
+      return t('analytics.range_transactions', {
+        defaultValue: '{{start}} – {{end}}',
+        start: format(filteredData.start, 'MMM d, yyyy'),
+        end: format(filteredData.end, 'MMM d, yyyy'),
+      });
+    }
+    return t('analytics.all_transactions', { defaultValue: 'Transactions' });
+  }, [filter, filteredData.start, filteredData.end, t]);
+
   const totalPages = Math.ceil(filteredData.transactions.length / ITEMS_PER_PAGE);
   const paginatedTransactions = useMemo(() => {
-    const sorted = [...filteredData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sorted = [...filteredData.transactions].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredData.transactions, currentPage]);
@@ -249,28 +268,29 @@ export default function Analytics() {
     }).format(amount);
   };
 
+  const chartTitle =
+    filter === 'yearly'
+      ? t('analytics.monthly_activity')
+      : filter === 'monthly'
+        ? t('analytics.daily_activity')
+        : filter === 'range'
+          ? t('analytics.range_activity', { defaultValue: 'Activity in range' })
+          : t('analytics.daily_activity');
+
   return (
     <AppLayout title={t('analytics.title')}>
       <div className="min-w-0 space-y-6 py-4">
-        {/* Filter Tabs */}
-        <div className="flex bg-secondary/50 p-1 rounded-lg animate-fade-in">
-          {(['daily', 'monthly', 'yearly'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={cn(
-                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
-                filter === f
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-              )}
-            >
-              {t(`analytics.${f}`)}
-            </button>
-          ))}
-        </div>
+        <AnalyticsDateFilter
+          filter={filter}
+          onFilterChange={setFilter}
+          selectedDay={selectedDay}
+          onSelectedDayChange={setSelectedDay}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          onRangeStartChange={setRangeStart}
+          onRangeEndChange={setRangeEnd}
+        />
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 gap-3 animate-fade-in sm:grid-cols-3">
           <Card className="min-w-0 overflow-hidden p-3 text-center">
             <TrendingUp className="mx-auto mb-1 h-5 w-5 text-success" />
@@ -297,12 +317,9 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Activity Chart */}
-        {filter !== 'daily' && (
+        {chartData.length > 0 && (
           <Card className="min-w-0 w-full animate-fade-in overflow-hidden p-4" style={{ animationDelay: '100ms' }}>
-            <h3 className="mb-4 font-semibold text-foreground">
-              {filter === 'yearly' ? 'Monthly Activity' : 'Daily Activity'}
-            </h3>
+            <h3 className="mb-4 font-semibold text-foreground">{chartTitle}</h3>
             <div className="h-40 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={chartData}>
@@ -311,7 +328,7 @@ export default function Analytics() {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    interval={filter === 'yearly' ? 0 : 2}
+                    interval={chartTickInterval}
                   />
                   <YAxis hide />
                   <Tooltip
@@ -322,7 +339,7 @@ export default function Analytics() {
                     }}
                     formatter={(value: number, name: string) => [
                       formatCurrency(value),
-                      name === 'income' ? 'Income' : 'Expense'
+                      name === 'income' ? 'Income' : 'Expense',
                     ]}
                   />
                   <Bar dataKey="income" fill="hsl(var(--chart-income))" radius={[4, 4, 0, 0]} />
@@ -333,10 +350,11 @@ export default function Analytics() {
           </Card>
         )}
 
-        {/* Category Breakdown */}
         {categoryData.length > 0 && (
           <Card className="min-w-0 w-full animate-fade-in overflow-hidden p-4" style={{ animationDelay: '200ms' }}>
-            <h3 className="mb-4 font-semibold text-foreground">Spending by Category</h3>
+            <h3 className="mb-4 font-semibold text-foreground">
+              {t('analytics.spending_by_category')}
+            </h3>
             <div className="flex w-full min-w-0 flex-col items-center gap-6 sm:flex-row">
               <div className="h-32 w-32 shrink-0 min-w-0">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -355,17 +373,19 @@ export default function Analytics() {
                       ))}
                     </Pie>
                   </PieChart>
-                  </ResponsiveContainer>
+                </ResponsiveContainer>
               </div>
-              <div className="flex-1 w-full space-y-2 min-w-0">
+              <div className="min-w-0 flex-1 space-y-2">
                 {categoryData.slice(0, 4).map((category) => (
                   <div key={category.name} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
                       <div
-                        className="w-3 h-3 rounded-full"
+                        className="h-3 w-3 shrink-0 rounded-full"
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="text-sm text-foreground truncate">{category.icon} {category.name}</span>
+                      <span className="truncate text-sm text-foreground">
+                        {category.icon} {category.name}
+                      </span>
                     </div>
                     <span className="text-sm font-medium text-foreground">
                       {formatCurrency(category.value)}
@@ -377,13 +397,10 @@ export default function Analytics() {
           </Card>
         )}
 
-        {/* Transaction List */}
-        <section className="space-y-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
-          <h3 className="font-semibold text-foreground">
-            {filter === 'daily' ? 'Today\'s Transactions' : 'Transactions'}
-          </h3>
+        <section className="animate-fade-in space-y-3" style={{ animationDelay: '300ms' }}>
+          <h3 className="font-semibold text-foreground">{listTitle}</h3>
           {paginatedTransactions.length === 0 ? (
-            <Card className="p-6 border-dashed text-center">
+            <Card className="border-dashed p-6 text-center">
               <p className="text-sm text-muted-foreground">No transactions found</p>
             </Card>
           ) : (
@@ -393,6 +410,7 @@ export default function Analytics() {
                   <TransactionItem
                     key={transaction.id}
                     transaction={transaction}
+                    onClick={() => setViewingTransaction(transaction)}
                     onEdit={(t) => setEditingTransaction(t)}
                   />
                 ))}
@@ -405,17 +423,15 @@ export default function Analytics() {
                       <PaginationPrevious
                         href="#"
                         onClick={(e) => handlePageChange(currentPage - 1, e)}
-                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                       />
                     </PaginationItem>
-
                     {renderPaginationItems()}
-
                     <PaginationItem>
                       <PaginationNext
                         href="#"
                         onClick={(e) => handlePageChange(currentPage + 1, e)}
-                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
                       />
                     </PaginationItem>
                   </PaginationContent>
@@ -426,6 +442,15 @@ export default function Analytics() {
         </section>
       </div>
 
+      <TransactionDetailDialog
+        open={!!viewingTransaction}
+        onOpenChange={(open) => !open && setViewingTransaction(null)}
+        transaction={viewingTransaction}
+        onEdit={(t) => {
+          setViewingTransaction(null);
+          setEditingTransaction(t);
+        }}
+      />
       <EditTransactionDialog
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}

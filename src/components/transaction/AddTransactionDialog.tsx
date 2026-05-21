@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
 import { useWallets, useCategories, useCreateTransaction, useCreateCategory } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthContext';
+import { ReceiptUploadField } from '@/components/common/ReceiptUploadField';
+import { resolveReceiptForSave, receiptStoragePath } from '@/lib/receipts';
 import { cn } from '@/lib/utils';
 import { Category } from '@/lib/types';
 
@@ -21,8 +24,10 @@ interface AddTransactionDialogProps {
 export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expense' }: AddTransactionDialogProps) {
   const { data: wallets = [] } = useWallets();
   const { data: categories = [] } = useCategories();
+  const { user } = useAuth();
   const createTransactionMutation = useCreateTransaction();
   const createCategoryMutation = useCreateCategory();
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [type, setType] = useState<'income' | 'expense'>(defaultType);
   const [walletId, setWalletId] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -44,6 +49,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
       setReason('');
       setNotes('');
       setDate(new Date().toISOString().split('T')[0]);
+      setReceiptFile(null);
     }
   }, [open, defaultType]);
 
@@ -94,8 +100,21 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
         }
       }
 
+      const transactionId = crypto.randomUUID();
+      const receiptUrl = await resolveReceiptForSave(receiptFile, undefined, {
+        userId: user?.id ?? null,
+        storagePath: user
+          ? receiptStoragePath(
+              user.id,
+              'transactions',
+              transactionId,
+              receiptFile?.name || 'receipt.jpg'
+            )
+          : '',
+      });
+
       await createTransactionMutation.mutateAsync({
-        id: crypto.randomUUID(),
+        id: transactionId,
         walletId,
         categoryId: finalCategoryId,
         amount: parseFloat(amount),
@@ -103,6 +122,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
         reason: reason.trim(),
         notes: notes.trim() || undefined,
         date: new Date(date),
+        receiptUrl,
       });
 
       onOpenChange(false);
@@ -246,6 +266,11 @@ export function AddTransactionDialog({ open, onOpenChange, defaultType = 'expens
               rows={2}
             />
           </div>
+
+          <ReceiptUploadField
+            pendingFile={receiptFile}
+            onPendingFileChange={setReceiptFile}
+          />
 
           <Button
             type="submit"

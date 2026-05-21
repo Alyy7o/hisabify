@@ -8,6 +8,8 @@ import { useSettlements, useDeleteSettlement } from '@/hooks/useAppData';
 import { AddSettlementDialog } from '@/components/settlement/AddSettlementDialog';
 import { SettlementMovementDialog } from '@/components/settlement/SettlementMovementDialog';
 import { SettlementCard } from '@/components/settlement/SettlementCard';
+import { SettlementDetailDialog } from '@/components/settlement/SettlementDetailDialog';
+import { Settlement } from '@/lib/types';
 import { HandCoins, ArrowRight, Plus, History } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -22,6 +24,7 @@ export default function Settlements() {
   const [showAddSettlement, setShowAddSettlement] = useState(false);
   const [editingSettlement, setEditingSettlement] = useState<typeof settlements[number] | null>(null);
   const [movementSettlement, setMovementSettlement] = useState<typeof settlements[number] | null>(null);
+  const [viewingSettlement, setViewingSettlement] = useState<Settlement | null>(null);
 
   const searchParams = new URLSearchParams(location.search);
   const openNew = searchParams.get('new') === '1';
@@ -158,6 +161,7 @@ export default function Settlements() {
                 onAddPayment={setMovementSettlement}
                 onEdit={handleEditSettlement}
                 onDelete={handleDeleteSettlement}
+                onView={setViewingSettlement}
               />
             ))}
           </div>
@@ -207,6 +211,11 @@ export default function Settlements() {
           }
         }}
         settlement={movementSettlement}
+      />
+      <SettlementDetailDialog
+        open={!!viewingSettlement}
+        onOpenChange={(open) => !open && setViewingSettlement(null)}
+        settlement={viewingSettlement}
       />
     </AppLayout>
   );

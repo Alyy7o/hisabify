@@ -7,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useRecordSettlementPayment, useWallets } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthContext';
+import { ReceiptUploadField } from '@/components/common/ReceiptUploadField';
+import { resolveReceiptForSave, receiptStoragePath } from '@/lib/receipts';
 import { Settlement } from '@/lib/types';
 import { IconDisplay } from '@/components/common/IconDisplay';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
@@ -20,8 +23,10 @@ interface SettlementMovementDialogProps {
 }
 
 export function SettlementMovementDialog({ open, onOpenChange, settlement }: SettlementMovementDialogProps) {
+  const { user } = useAuth();
   const { data: wallets = [] } = useWallets();
   const recordSettlementPaymentMutation = useRecordSettlementPayment();
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [useSplit, setUseSplit] = useState(false);
   const [entryType, setEntryType] = useState<'paid' | 'remaining'>('paid');
   const [amountInput, setAmountInput] = useState('');
@@ -37,6 +42,7 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
       setWalletId(settlement.walletId ?? wallets[0]?.id ?? '');
       setNote('');
       setDate(new Date().toISOString().split('T')[0]);
+      setReceiptFile(null);
     }
   }, [open, settlement, wallets]);
 
@@ -88,6 +94,19 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
     }
 
     try {
+      const movementId = crypto.randomUUID();
+      const receiptUrl = await resolveReceiptForSave(receiptFile, undefined, {
+        userId: user?.id ?? null,
+        storagePath: user
+          ? receiptStoragePath(
+              user.id,
+              'settlement-payments',
+              `${settlement.id}/${movementId}`,
+              receiptFile?.name || 'receipt.jpg'
+            )
+          : '',
+      });
+
       await recordSettlementPaymentMutation.mutateAsync({
         settlementId: settlement.id,
         payload: {
@@ -95,7 +114,9 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
           walletId,
           note: note.trim() || undefined,
           date: new Date(date),
-        }
+          movementId,
+          receiptUrl,
+        },
       });
 
       toast.success('Settlement updated and transaction added');
@@ -213,6 +234,8 @@ export function SettlementMovementDialog({ open, onOpenChange, settlement }: Set
             <Label htmlFor="date">Date</Label>
             <DatePickerInput id="date" value={date} onChange={setDate} />
           </div>
+
+          <ReceiptUploadField pendingFile={receiptFile} onPendingFileChange={setReceiptFile} />
 
           <div className="space-y-2">
             <Label htmlFor="note">Note</Label>

@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateSettlement, useUpdateSettlement } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthContext';
+import { ReceiptUploadField } from '@/components/common/ReceiptUploadField';
+import { resolveReceiptForSave, receiptStoragePath } from '@/lib/receipts';
 import { cn } from '@/lib/utils';
 import { Settlement, SettlementKind } from '@/lib/types';
 import { DatePickerInput } from '@/components/common/DatePickerInput';
@@ -20,8 +23,11 @@ interface AddSettlementDialogProps {
 type Mode = SettlementKind;
 
 export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: AddSettlementDialogProps) {
+  const { user } = useAuth();
   const createSettlementMutation = useCreateSettlement();
   const updateSettlementMutation = useUpdateSettlement();
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [storedReceiptUrl, setStoredReceiptUrl] = useState<string | undefined>();
   const [mode, setMode] = useState<Mode>('given');
   const [personName, setPersonName] = useState('');
   const [title, setTitle] = useState('');
@@ -40,6 +46,8 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
         setDueDate(initialSettlement.dueDate ? new Date(initialSettlement.dueDate).toISOString().split('T')[0] : '');
         setNotes(initialSettlement.notes ?? '');
         setDate(new Date(initialSettlement.createdAt).toISOString().split('T')[0]);
+        setStoredReceiptUrl(initialSettlement.receiptUrl);
+        setReceiptFile(null);
       } else {
         setMode('given');
         setPersonName('');
@@ -48,6 +56,8 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
         setDueDate('');
         setNotes('');
         setDate(new Date().toISOString().split('T')[0]);
+        setStoredReceiptUrl(undefined);
+        setReceiptFile(null);
       }
     }
   }, [open, initialSettlement]);
@@ -64,31 +74,58 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
 
     const settlementId = initialSettlement?.id ?? crypto.randomUUID();
 
-    const settlement: Settlement = {
-      id: settlementId,
-      personName: personName.trim(),
-      title: title.trim(),
-      kind: mode,
-      totalAmount: settlementAmount,
-      paidAmount: 0,
-      remainingAmount: settlementAmount,
-      status: 'active',
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      notes: notes.trim() || undefined,
-      createdAt: new Date(date),
-      updatedAt: new Date(),
-      movements: [],
-    };
-
     try {
+      const receiptUrl = await resolveReceiptForSave(receiptFile, storedReceiptUrl, {
+        userId: user?.id ?? null,
+        storagePath: user
+          ? receiptStoragePath(
+              user.id,
+              'settlements',
+              settlementId,
+              receiptFile?.name || 'receipt.jpg'
+            )
+          : '',
+      });
+
+      const settlement: Settlement = {
+        id: settlementId,
+        personName: personName.trim(),
+        title: title.trim(),
+        kind: mode,
+        totalAmount: settlementAmount,
+        paidAmount: initialSettlement?.paidAmount ?? 0,
+        remainingAmount: initialSettlement?.remainingAmount ?? settlementAmount,
+        status: initialSettlement?.status ?? 'active',
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        notes: notes.trim() || undefined,
+        receiptUrl,
+        createdAt: initialSettlement?.createdAt ?? new Date(date),
+        updatedAt: new Date(),
+        movements: initialSettlement?.movements ?? [],
+      };
+
       if (initialSettlement) {
         await updateSettlementMutation.mutateAsync({
           id: settlementId,
-          updates: settlement
+          updates: {
+            personName: settlement.personName,
+            title: settlement.title,
+            kind: settlement.kind,
+            totalAmount: settlement.totalAmount,
+            dueDate: settlement.dueDate,
+            notes: settlement.notes,
+            receiptUrl: settlement.receiptUrl,
+          },
         });
         toast.success('Settlement updated');
       } else {
-        await createSettlementMutation.mutateAsync(settlement);
+        await createSettlementMutation.mutateAsync({
+          ...settlement,
+          paidAmount: 0,
+          remainingAmount: settlementAmount,
+          status: 'active',
+          movements: [],
+        });
         toast.success('Settlement saved');
       }
       onOpenChange(false);
@@ -201,6 +238,13 @@ export function AddSettlementDialog({ open, onOpenChange, initialSettlement }: A
               rows={3}
             />
           </div>
+
+          <ReceiptUploadField
+            value={storedReceiptUrl}
+            pendingFile={receiptFile}
+            onPendingFileChange={setReceiptFile}
+            onClearStored={() => setStoredReceiptUrl(undefined)}
+          />
 
           <Button type="submit" className="w-full">
             Save settlement

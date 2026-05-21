@@ -8,6 +8,8 @@ import { WalletCard } from '@/components/wallet/WalletCard';
 import { TransactionItem } from '@/components/transaction/TransactionItem';
 import { AddWalletDialog } from '@/components/wallet/AddWalletDialog';
 import { EditTransactionDialog } from '@/components/transaction/EditTransactionDialog';
+import { TransactionDetailDialog } from '@/components/transaction/TransactionDetailDialog';
+import { Transaction } from '@/lib/types';
 import { TrendingUp, TrendingDown, Wallet, Plus, ArrowRight, ArrowRightLeft, HandCoins, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -20,7 +22,8 @@ export default function Index() {
   const { user } = useAuth();
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [editingWallet, setEditingWallet] = useState<any>(null);
-  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
   const [showBalance, setShowBalance] = useState(() => {
     const storedValue = localStorage.getItem('dashboard-show-balance');
     return storedValue ? storedValue === 'true' : true;
@@ -251,9 +254,8 @@ export default function Index() {
                 <TransactionItem
                   key={transaction.id}
                   transaction={transaction}
-                  onEdit={(t) => {
-                    setEditingTransaction(t);
-                  }}
+                  onClick={() => setViewingTransaction(transaction)}
+                  onEdit={(t) => setEditingTransaction(t)}
                 />
               ))}
             </div>
@@ -268,6 +270,15 @@ export default function Index() {
           if (!open) setEditingWallet(null);
         }}
         initialData={editingWallet}
+      />
+      <TransactionDetailDialog
+        open={!!viewingTransaction}
+        onOpenChange={(open) => !open && setViewingTransaction(null)}
+        transaction={viewingTransaction}
+        onEdit={(t) => {
+          setViewingTransaction(null);
+          setEditingTransaction(t);
+        }}
       />
       <EditTransactionDialog
         open={!!editingTransaction}
