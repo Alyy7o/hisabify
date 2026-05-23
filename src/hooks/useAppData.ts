@@ -1,9 +1,11 @@
+import { useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/auth/AuthContext';
 import { useStore } from '@/store/useStore';
 import { Wallet, Transaction, Category, Settlement, SettlementMovement } from '@/lib/types';
 import { toast } from 'sonner';
+import { debugLog } from '@/lib/debugLog';
 
 // --- Mappings ---
 function mapDbWalletToClient(w: any): Wallet {
@@ -127,10 +129,33 @@ function mapDbSettlementToClient(s: any): Settlement {
   };
 }
 
+async function fetchWalletBalance(walletId: string, userId: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('wallets')
+    .select('balance')
+    .eq('id', walletId)
+    .eq('user_id', userId)
+    .single();
+  if (error) return null;
+  return Number(data?.balance);
+}
+
 /** Single DB transaction: adjust wallet(s) then insert row. Requires migration `create_transaction_with_wallets`. */
 async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction, userId: string) {
   const payload = mapClientTransactionToDb(transaction, userId);
   const toWalletId = transaction.type === 'transfer' ? transaction.toWalletId ?? null : null;
+  const balanceBefore = await fetchWalletBalance(transaction.walletId, userId);
+
+  // #region agent log
+  debugLog('H1', 'useAppData.ts:rpc', 'before_create_transaction_rpc', {
+    txId: transaction.id,
+    amount: transaction.amount,
+    clientType: transaction.type,
+    dbType: payload.type,
+    balanceBefore,
+  });
+  // #endregion
+
   const { error } = await supabase.rpc('create_transaction_with_wallets', {
     p_id: payload.id,
     p_wallet_id: payload.wallet_id,
@@ -142,6 +167,33 @@ async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction,
     p_notes: payload.notes ?? '',
     p_to_wallet_id: toWalletId,
   });
+
+  const balanceAfter = await fetchWalletBalance(transaction.walletId, userId);
+  const expectedDelta =
+    transaction.type === 'income'
+      ? transaction.amount
+      : transaction.type === 'expense' || transaction.type === 'transfer'
+        ? -transaction.amount
+        : 0;
+  const actualDelta =
+    balanceBefore !== null && balanceAfter !== null ? balanceAfter - balanceBefore : null;
+
+  // #region agent log
+  debugLog('H1', 'useAppData.ts:rpc', 'after_create_transaction_rpc', {
+    txId: transaction.id,
+    rpcError: error?.message ?? null,
+    rpcCode: error?.code ?? null,
+    balanceBefore,
+    balanceAfter,
+    expectedDelta,
+    actualDelta,
+    doubleWalletUpdate:
+      actualDelta !== null &&
+      expectedDelta !== 0 &&
+      Math.abs(actualDelta - expectedDelta * 2) < 0.01,
+  });
+  // #endregion
+
   if (error) throw error;
 
   if (transaction.receiptUrl) {
@@ -346,16 +398,44 @@ export function useCreateTransaction() {
   const { user } = useAuth();
   const addGuestTransaction = useStore(state => state.addTransaction);
   const queryClient = useQueryClient();
+  const createInFlightRef = useRef(false);
 
   return useMutation({
     mutationFn: async (transaction: Transaction) => {
+      // #region agent log
+      debugLog('H2', 'useAppData.ts:useCreateTransaction', 'mutation_invoked', {
+        txId: transaction.id,
+        amount: transaction.amount,
+        hasUser: !!user,
+        concurrentBlocked: createInFlightRef.current,
+      });
+      // #endregion
+
+      if (createInFlightRef.current) {
+        return transaction;
+      }
+      createInFlightRef.current = true;
+
+      try {
       if (!user) {
+        const before = useStore.getState().wallets.find((w) => w.id === transaction.walletId)?.balance;
         addGuestTransaction(transaction);
+        const after = useStore.getState().wallets.find((w) => w.id === transaction.walletId)?.balance;
+        // #region agent log
+        debugLog('H3', 'useAppData.ts:useCreateTransaction', 'guest_wallet_delta', {
+          before,
+          after,
+          delta: before !== undefined && after !== undefined ? after - before : null,
+        });
+        // #endregion
         return transaction;
       }
 
       await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
       return transaction;
+      } finally {
+        createInFlightRef.current = false;
+      }
     },
     onSuccess: () => {
       if (user) {
@@ -591,6 +671,7 @@ export function useRecordSettlementPayment() {
   const { user } = useAuth();
   const recordGuestPayment = useStore(state => state.recordSettlementPayment);
   const queryClient = useQueryClient();
+  const paymentInFlightRef = useRef(false);
 
   return useMutation({
     mutationFn: async ({ settlementId, payload }: {
@@ -604,6 +685,12 @@ export function useRecordSettlementPayment() {
         receiptUrl?: string;
       };
     }) => {
+      if (paymentInFlightRef.current) {
+        return;
+      }
+      paymentInFlightRef.current = true;
+
+      try {
       if (!user) {
         recordGuestPayment(settlementId, payload);
         return;
@@ -681,6 +768,9 @@ export function useRecordSettlementPayment() {
       };
 
       await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
+      } finally {
+        paymentInFlightRef.current = false;
+      }
     },
     onSuccess: () => {
       if (user) {
