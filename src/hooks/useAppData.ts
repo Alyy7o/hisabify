@@ -5,7 +5,6 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { useStore } from '@/store/useStore';
 import { Wallet, Transaction, Category, Settlement, SettlementMovement } from '@/lib/types';
 import { toast } from 'sonner';
-import { debugLog } from '@/lib/debugLog';
 
 // --- Mappings ---
 function mapDbWalletToClient(w: any): Wallet {
@@ -129,33 +128,10 @@ function mapDbSettlementToClient(s: any): Settlement {
   };
 }
 
-async function fetchWalletBalance(walletId: string, userId: string): Promise<number | null> {
-  const { data, error } = await supabase
-    .from('wallets')
-    .select('balance')
-    .eq('id', walletId)
-    .eq('user_id', userId)
-    .single();
-  if (error) return null;
-  return Number(data?.balance);
-}
-
 /** Single DB transaction: adjust wallet(s) then insert row. Requires migration `create_transaction_with_wallets`. */
 async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction, userId: string) {
   const payload = mapClientTransactionToDb(transaction, userId);
   const toWalletId = transaction.type === 'transfer' ? transaction.toWalletId ?? null : null;
-  const balanceBefore = await fetchWalletBalance(transaction.walletId, userId);
-
-  // #region agent log
-  debugLog('H1', 'useAppData.ts:rpc', 'before_create_transaction_rpc', {
-    txId: transaction.id,
-    amount: transaction.amount,
-    clientType: transaction.type,
-    dbType: payload.type,
-    balanceBefore,
-  });
-  // #endregion
-
   const { error } = await supabase.rpc('create_transaction_with_wallets', {
     p_id: payload.id,
     p_wallet_id: payload.wallet_id,
@@ -168,33 +144,6 @@ async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction,
     p_to_wallet_id: toWalletId,
     p_receipt_url: transaction.receiptUrl ?? '',
   });
-
-  const balanceAfter = await fetchWalletBalance(transaction.walletId, userId);
-  const expectedDelta =
-    transaction.type === 'income'
-      ? transaction.amount
-      : transaction.type === 'expense' || transaction.type === 'transfer'
-        ? -transaction.amount
-        : 0;
-  const actualDelta =
-    balanceBefore !== null && balanceAfter !== null ? balanceAfter - balanceBefore : null;
-
-  // #region agent log
-  debugLog('H1', 'useAppData.ts:rpc', 'after_create_transaction_rpc', {
-    txId: transaction.id,
-    rpcError: error?.message ?? null,
-    rpcCode: error?.code ?? null,
-    balanceBefore,
-    balanceAfter,
-    expectedDelta,
-    actualDelta,
-    doubleWalletUpdate:
-      actualDelta !== null &&
-      expectedDelta !== 0 &&
-      Math.abs(actualDelta - expectedDelta * 2) < 0.01,
-  });
-  // #endregion
-
   if (error) throw error;
 }
 
@@ -394,37 +343,19 @@ export function useCreateTransaction() {
 
   return useMutation({
     mutationFn: async (transaction: Transaction) => {
-      // #region agent log
-      debugLog('H2', 'useAppData.ts:useCreateTransaction', 'mutation_invoked', {
-        txId: transaction.id,
-        amount: transaction.amount,
-        hasUser: !!user,
-        concurrentBlocked: createInFlightRef.current,
-      });
-      // #endregion
-
       if (createInFlightRef.current) {
         return transaction;
       }
       createInFlightRef.current = true;
 
       try {
-      if (!user) {
-        const before = useStore.getState().wallets.find((w) => w.id === transaction.walletId)?.balance;
-        addGuestTransaction(transaction);
-        const after = useStore.getState().wallets.find((w) => w.id === transaction.walletId)?.balance;
-        // #region agent log
-        debugLog('H3', 'useAppData.ts:useCreateTransaction', 'guest_wallet_delta', {
-          before,
-          after,
-          delta: before !== undefined && after !== undefined ? after - before : null,
-        });
-        // #endregion
-        return transaction;
-      }
+        if (!user) {
+          addGuestTransaction(transaction);
+          return transaction;
+        }
 
-      await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
-      return transaction;
+        await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
+        return transaction;
       } finally {
         createInFlightRef.current = false;
       }
@@ -683,83 +614,82 @@ export function useRecordSettlementPayment() {
       paymentInFlightRef.current = true;
 
       try {
-      if (!user) {
-        recordGuestPayment(settlementId, payload);
-        return;
-      }
+        if (!user) {
+          recordGuestPayment(settlementId, payload);
+          return;
+        }
 
-      // We need the current settlement from DB
-      const { data: settlementData, error: fetchError } = await supabase
-        .from('settlements')
-        .select('*')
-        .eq('id', settlementId)
-        .eq('user_id', user.id)
-        .single();
+        const { data: settlementData, error: fetchError } = await supabase
+          .from('settlements')
+          .select('*')
+          .eq('id', settlementId)
+          .eq('user_id', user.id)
+          .single();
 
-      if (fetchError || !settlementData) throw fetchError || new Error("Settlement not found");
+        if (fetchError || !settlementData) throw fetchError || new Error('Settlement not found');
 
-      const settlement = mapDbSettlementToClient(settlementData);
-      
-      const paymentAmount = payload.amount;
-      if (!Number.isFinite(paymentAmount) || paymentAmount <= 0 || paymentAmount > settlement.remainingAmount) {
-        throw new Error("Invalid payment amount");
-      }
+        const settlement = mapDbSettlementToClient(settlementData);
 
-      const movementDirection: SettlementMovement['direction'] = settlement.kind === 'given' ? 'inflow' : 'outflow';
-      const transactionType: Transaction['type'] = settlement.kind === 'given' ? 'income' : 'expense';
-      
-      const movement: SettlementMovement = {
-        id: payload.movementId ?? crypto.randomUUID(),
-        settlementId,
-        kind: 'payment',
-        direction: movementDirection,
-        amount: paymentAmount,
-        walletId: payload.walletId,
-        applyToWallet: true,
-        note: payload.note,
-        date: payload.date,
-        receiptUrl: payload.receiptUrl,
-      };
+        const paymentAmount = payload.amount;
+        if (!Number.isFinite(paymentAmount) || paymentAmount <= 0 || paymentAmount > settlement.remainingAmount) {
+          throw new Error('Invalid payment amount');
+        }
 
-      const updatedMovements = [...settlement.movements, movement];
-      const paidAmount = updatedMovements
-        .filter((m) => m.kind === 'payment')
-        .reduce((sum, m) => sum + m.amount, 0);
-      const remainingAmount = Math.max(0, settlement.totalAmount - paidAmount);
+        const movementDirection: SettlementMovement['direction'] = settlement.kind === 'given' ? 'inflow' : 'outflow';
+        const transactionType: Transaction['type'] = settlement.kind === 'given' ? 'income' : 'expense';
 
-      const updatedSettlementDb = {
-        movements: updatedMovements,
-        paid_amount: paidAmount,
-        remaining_amount: remainingAmount,
-        status: remainingAmount <= 0 ? 'completed' : 'active',
-        updated_at: new Date().toISOString()
-      };
+        const movement: SettlementMovement = {
+          id: payload.movementId ?? crypto.randomUUID(),
+          settlementId,
+          kind: 'payment',
+          direction: movementDirection,
+          amount: paymentAmount,
+          walletId: payload.walletId,
+          applyToWallet: true,
+          note: payload.note,
+          date: payload.date,
+          receiptUrl: payload.receiptUrl,
+        };
 
-      const { error: updateError } = await supabase
-        .from('settlements')
-        .update(updatedSettlementDb)
-        .eq('id', settlementId)
-        .eq('user_id', user.id);
+        const updatedMovements = [...settlement.movements, movement];
+        const paidAmount = updatedMovements
+          .filter((m) => m.kind === 'payment')
+          .reduce((sum, m) => sum + m.amount, 0);
+        const remainingAmount = Math.max(0, settlement.totalAmount - paidAmount);
 
-      if (updateError) throw updateError;
+        const updatedSettlementDb = {
+          movements: updatedMovements,
+          paid_amount: paidAmount,
+          remaining_amount: remainingAmount,
+          status: remainingAmount <= 0 ? 'completed' : 'active',
+          updated_at: new Date().toISOString(),
+        };
 
-      const transaction: Transaction = {
-        id: crypto.randomUUID(),
-        walletId: payload.walletId,
-        categoryId: 'transfer',
-        amount: paymentAmount,
-        type: transactionType,
-        reason: settlement.kind === 'given'
-          ? `Settlement received from ${settlement.personName}`
-          : `Settlement paid to ${settlement.personName}`,
-        notes: payload.note?.trim()
-          ? `${settlement.title}\n${payload.note.trim()}`
-          : settlement.title,
-        date: payload.date,
-        receiptUrl: payload.receiptUrl,
-      };
+        const { error: updateError } = await supabase
+          .from('settlements')
+          .update(updatedSettlementDb)
+          .eq('id', settlementId)
+          .eq('user_id', user.id);
 
-      await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
+        if (updateError) throw updateError;
+
+        const transaction: Transaction = {
+          id: crypto.randomUUID(),
+          walletId: payload.walletId,
+          categoryId: 'transfer',
+          amount: paymentAmount,
+          type: transactionType,
+          reason: settlement.kind === 'given'
+            ? `Settlement received from ${settlement.personName}`
+            : `Settlement paid to ${settlement.personName}`,
+          notes: payload.note?.trim()
+            ? `${settlement.title}\n${payload.note.trim()}`
+            : settlement.title,
+          date: payload.date,
+          receiptUrl: payload.receiptUrl,
+        };
+
+        await supabaseRpcCreateTransactionWithWallets(transaction, user.id);
       } finally {
         paymentInFlightRef.current = false;
       }
