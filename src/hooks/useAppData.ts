@@ -166,6 +166,7 @@ async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction,
     p_date: payload.date,
     p_notes: payload.notes ?? '',
     p_to_wallet_id: toWalletId,
+    p_receipt_url: transaction.receiptUrl ?? '',
   });
 
   const balanceAfter = await fetchWalletBalance(transaction.walletId, userId);
@@ -195,15 +196,6 @@ async function supabaseRpcCreateTransactionWithWallets(transaction: Transaction,
   // #endregion
 
   if (error) throw error;
-
-  if (transaction.receiptUrl) {
-    const { error: receiptError } = await supabase
-      .from('transactions')
-      .update({ receipt_url: transaction.receiptUrl })
-      .eq('id', transaction.id)
-      .eq('user_id', userId);
-    if (receiptError) throw receiptError;
-  }
 }
 
 function mapClientSettlementToDb(s: Settlement, userId: string): any {
